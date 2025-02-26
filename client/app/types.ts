@@ -3,7 +3,12 @@ interface Product {
     title: string,
     description: string,
     image: string,
-    price: number
+    price: number,
+}
+
+interface Category {
+    id: number,
+    name: string,
 }
 
 interface addProductProps {

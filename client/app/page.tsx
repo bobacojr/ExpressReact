@@ -14,11 +14,13 @@ export default function Home() {
   };
 
   return (
-    <div className="flex w-screen h-screen justify-center">
-      <div className="flex flex-col">
-        <Navbar />
-        <Products />
-      </div>
+    <div className="flex w-screen h-screen justify-center overflow-x-hidden">
+        <div className="fixed top-0 left-0 w-full z-20">
+          <Navbar />
+        </div>
+        <div className="flex w-full mt-24">
+          <Products />
+        </div>
     </div>
   );
 }
