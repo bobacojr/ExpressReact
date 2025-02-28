@@ -31,8 +31,8 @@ const RegistrationForm = () => {
     };
 
     return ( 
-        <div className='flex flex-col w-screen h-screen items-center border-2 border-red-600'>
-            <h2 className='flex justify-center items-center text-xl font-bold mt-8'>
+        <div className='flex flex-col w-screen h-screen items-center'>
+            <h2 className='flex justify-center items-center text-xl font-bold mt-20'>
                 Create your E-Shop account
             </h2>
             <form onSubmit={handleSubmit} className='flex flex-col w-full justify-center items-center gap-2 mt-2'>

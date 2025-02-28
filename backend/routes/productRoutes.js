@@ -1,8 +1,12 @@
+/*  
+    ALL PRODUCT API ROUTES
+*/
 import express from "express";
 import db from "../db.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import verifySession from "../middleware/verifySession.js"
 import verifyToken from "../middleware/verifyToken.js";
 import checkRole from "../middleware/checkRole.js";
 
@@ -25,15 +29,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Get all products (with optional filter)
+// Get all products (all roles)
 router.get("/", async (req, res) => {
     const { category_id } = req.query;
     //const user_id = req.user.id;
     let q = `
-    SELECT products.*, categories.name AS category_name
-    FROM products 
-    LEFT JOIN categories ON products.category_id = categories.id
-    `;
+        SELECT products.*, categories.name AS category_name
+        FROM products 
+        LEFT JOIN categories ON products.category_id = categories.id`;
 
     if (category_id) {
         q += " WHERE products.category_id = ?";
@@ -47,10 +50,10 @@ router.get("/", async (req, res) => {
     });
 });
 
-// Create new product
-router.post("/", verifyToken, checkRole(['admin']), upload.single('image'), async (req, res) => {
+// Create new product (admin only)
+router.post("/", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
     const { title, description, price, category_id, size, color, author, brand, model, quantity} = req.body;
-    const user_id = req.user.id;
+    const user_id = req.session.userID;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
 
     const q = "INSERT INTO products (`title`, `description`, `price`, `image`, `category_id`, `size`, `color`, `author`, `brand`, `model`, `quantity`, `user_id`) VALUES (?)";
@@ -83,15 +86,14 @@ router.post("/", verifyToken, checkRole(['admin']), upload.single('image'), asyn
     });
 });
 
-// Find product by id
+// Get product by id (all roles)
 router.get("/:id", async (req, res) => {
     const product_id = req.params.id;
     const q = `
         SELECT products.*, categories.name AS category_name
         FROM products
         LEFT JOIN categories ON products.category_id = categories.id
-        WHERE products.id = ?
-    `;
+        WHERE products.id = ?`;
 
     db.query(q, [product_id], (error, data) => {
         if (error) {
@@ -112,10 +114,10 @@ router.get("/:id", async (req, res) => {
     });
 });
 
-// Update existing product by id
-router.put("/:id", verifyToken, checkRole(['admin']), upload.single('image'), async (req, res) => {
+// Update existing product by id (admin only)
+router.put("/:id", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
     const product_id = req.params.id;
-    const user_id = req.user.id;
+    const user_id = req.session.userID;
     const { title, description, price, category_id, size, color, author, brand, model, quantity } = req.body;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
     let q = "UPDATE products SET ";
@@ -195,10 +197,10 @@ router.put("/:id", verifyToken, checkRole(['admin']), upload.single('image'), as
     });
 });
 
-// Delete existing product by id
-router.delete("/:id", verifyToken, checkRole(['admin']), async (req, res) => {
+// Delete existing product by id (admin only)
+router.delete("/:id", verifySession, checkRole(['admin']), async (req, res) => {
     const product_id = req.params.id;
-    const user_id = req.user.id;
+    const user_id = req.session.userID;
 
     const q_fetchImage = "SELECT image FROM products WHERE id = ? AND user_id = ?";
     db.query(q_fetchImage, [product_id, user_id], (error, data) => {
@@ -215,7 +217,7 @@ router.delete("/:id", verifyToken, checkRole(['admin']), async (req, res) => {
         }
         const imagePath = data[0].image;
         if (imagePath) {
-            fs.unlink(imagePath, (error) => {
+            fs.unlink(imagePath, (error) => { // Deletes the products png file from the uploads folder
                 if (error) {
                     console.error("Failed to delete product's image from database", error);
                 }

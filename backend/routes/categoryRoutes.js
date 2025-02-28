@@ -1,6 +1,9 @@
+/*  
+    ALL CATEGORY API ROUTES
+*/
 import express from "express";
 import db from "../db.js";
-import verifyToken from "../middleware/verifyToken.js";
+import verifySession from "../middleware/verifySession.js";
 import checkRole from "../middleware/checkRole.js";
 
 const router = express.Router();
@@ -19,9 +22,9 @@ router.get("/", async (req, res) => {
     });
 });
 
-router.post("/", verifyToken, checkRole(['admin']), async (req, res) => {
+router.post("/", verifySession, checkRole(['admin']), async (req, res) => {
     const { name } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.session.userID;
     const q = "INSERT INTO categories (`name`, `user_id`) VALUES (?)";
     const values = [
         name,
@@ -43,9 +46,9 @@ router.post("/", verifyToken, checkRole(['admin']), async (req, res) => {
 });
 
 // Delete category (will maybe add additional logic later to delete associated products)
-router.delete("/:id", verifyToken, checkRole(['admin']), async (req, res) => {
+router.delete("/:id", verifySession, checkRole(['admin']), async (req, res) => {
     const category_id = req.params.id;
-    const user_id = req.user.id;
+    const user_id = req.session.userID;
     const q_check = "SELECT * FROM categories WHERE id = ? AND user_id = ?";
     db.query(q_check, [category_id, user_id], (error, data) => {
         if (error) {

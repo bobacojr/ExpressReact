@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../(components)/axiosConfig';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -11,10 +11,12 @@ const Products = () => {
     const [currentCategory, setCurrentCategory] = useState('All'); // Default search filter is All
 
     useEffect(() => {
+        // Fetch all products
         const fetchAllProducts = async () => {
             try {
                 const res = await axios.get("http://localhost:8080/products", {
-                    params: { category_id: currentCategory === "All" ? null : currentCategory }
+                    params: { category_id: currentCategory === "All" ? null : currentCategory },
+                    withCredentials: true,
                 });
                 setProducts(res.data);
             } catch (error) {
@@ -32,6 +34,21 @@ const Products = () => {
         fetchAllProducts();
         fetchCategories();
     }, [currentCategory]);
+
+    // Add product to cart
+    const addToCart = async (product_id: number) => {
+        try {
+            const quantity = 1; // Will need to implement choosing a specific quantity
+            const res = await axios.post("http://localhost:8080/cart/add", 
+                { product_id: product_id, quantity: quantity },
+                { withCredentials: true },
+            );
+            console.log(res.data.message);
+        } catch (error: any) { // Will need to look into these error messages
+            console.error("Failed to add to cart:", error.response?.data || error.message);
+            alert(`Failed to add to cart: ${error.response?.data?.message || error.message}`);
+        }
+    };
 
     const handleClick = (product_id: number) => {
         console.log("Moving to edit product page");
@@ -89,7 +106,7 @@ const Products = () => {
                                 </button>
                                 <button 
                                     className='flex justify-center items-center border-2 border-gray-300 w-24 rounded-lg m-1'
-                                    onClick={() => handleClick(product.id)}
+                                    onClick={() => addToCart(product.id)}
                                     >
                                     Add to Cart
                                 </button>

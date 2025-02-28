@@ -1,17 +1,31 @@
 "use client"
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Navbar from "./(components)/navbar/page";
 import Products from '@/app/products/page';
-import AddProduct from "./add_products/page";
+import axios from './(components)/axiosConfig';
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const addProduct = (newProduct: Product) => {
-    console.log("adding product to main page...")
-    setProducts((prevProducts) => [...prevProducts, newProduct]);
-  };
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await axios.get("http://localhost:8080/auth/me");
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.log("Authentication check failed, please login");
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  if (!isAuthenticated) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div className="flex w-screen h-screen justify-center overflow-x-hidden">

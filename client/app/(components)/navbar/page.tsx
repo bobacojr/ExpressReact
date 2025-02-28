@@ -5,36 +5,66 @@ import { motion } from 'motion/react';
 import * as variants from '../variants/variants';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import axios from '../axiosConfig';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isAccount, setIsAccount] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [cartItems, setCartItems] = useState<Product[]>([]);
     const [username, setUsername] = useState('');
     const router = useRouter();
 
     useEffect(() => {
-        const token = localStorage.getItem('token'); // Search localStorage for account token
-        if (token) {
-            const decodedToken = JSON.parse(atob(token.split('.')[1]));
-            setUsername(decodedToken.username);
-            setIsLoggedIn(true);
-        }
+        const checkAuthentication = async () => {
+            try {
+                const res = await axios.get("http://localhost:8080/auth/me"); // Returns user_id, username, and role
+                setUsername(res.data.user.username);
+                setIsLoggedIn(true);
+            } catch (error) {
+                setIsLoggedIn(false);
+                setUsername('');
+                console.error("Authentication check failed");
+            }
+        };
+        checkAuthentication();
     }, []);
 
     const handleIsOpenClick = () => {
-        setIsOpen((prevIsOpen) => !prevIsOpen);
+        setIsOpen((prev) => !prev);
     };
 
     const handleAccountClick = () => {
-        setIsAccount((prevIsAccount) => !prevIsAccount);
+        setIsAccount((prev) => !prev);
     };
 
-    const handleSignOut = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
-        setUsername('');
-        router.push('/login')
+    const handleCartClick = async () => {
+        setIsCartOpen((prev) => !prev);
+        if (!isCartOpen) {
+            await fetchCart();
+        }
+    }
+
+    const handleSignOut = async () => {
+        try {
+            await axios.post("http://localhost:8080/auth/logout");
+            setIsLoggedIn(false);
+            setUsername('');
+            router.push('/login');
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
+
+    const fetchCart = async () => {
+        try {
+            const res = await axios.get("http://localhost:8080/cart");
+            console.log(`CartItems: ${res.data}`)
+            setCartItems(res.data.data);
+        } catch (error) {
+            console.error("Failed to fetch cart:", error);
+        }
     };
 
     return ( 
@@ -42,15 +72,14 @@ const Navbar = () => {
             <div className='flex flex-row w-full h-auto items-center justify-between'>
                 <motion.div className='flex flex-col ml-6 w-16 h-auto justify-center'
                     onClick={handleIsOpenClick}
-                    whileHover={{  }}
                     >
-                    <motion.div className='flex flex-col w-1/2 cursor-pointer z-20' whileHover={{  }}>
+                    <motion.div className='flex flex-col w-1/2 cursor-pointer z-20'>
                         <motion.span className='line' variants={variants.hamMenuLine1} animate={isOpen ? 'animate' : 'initial'} initial='initial'/>
                         <motion.span className='line' variants={variants.hamMenuLine2} animate={isOpen ? 'animate' : 'initial'} initial='initial'/>
                         <motion.span className='line' variants={variants.hamMenuLine3} animate={isOpen ? 'animate' : 'initial'} initial='initial'/>
                     </motion.div>
-                    
                 </motion.div>
+
                 <div className='flex flex-col justify-center items-center text-lg font-semibold'>
                     <Link href={'/'}>
                         <span>
@@ -58,17 +87,22 @@ const Navbar = () => {
                         </span>
                     </Link>
                 </div>
+
                 <div className='flex gap-3 justify-between items-center mr-8 w-16 h-auto'>
                     <motion.span 
                         className='w-1/2 cursor-pointer'
                         whileHover={{ scale: 1.2 }}
                         whileTap={{ scale: 0.9 }}
+                        onClick={handleCartClick}
                         >
-                        <svg width="25px" height="25px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6.787 15.981l14.11-1.008L23.141 6H5.345L5.06 4.37a1.51 1.51 0 0 0-1.307-1.23l-2.496-.286-.114.994 2.497.286a.502.502 0 0 1 .435.41l1.9 10.853-.826 1.301A1.497 1.497 0 0 0 6 18.94v.153a1.5 1.5 0 1 0 1 0V19h11.5a.497.497 0 0 1 .356.15 1.502 1.502 0 1 0 1.074-.08A1.497 1.497 0 0 0 18.5 18H6.416a.5.5 0 0 1-.422-.768zM19.5 21a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zm-13 0a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zM21.86 7l-1.757 7.027-13.188.942L5.52 7z"/>
-                            <path fill="none" d="M0 0h24v24H0z"/>
-                        </svg>
+                        <Link href="/show_cart">
+                            <svg width="25px" height="25px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6.787 15.981l14.11-1.008L23.141 6H5.345L5.06 4.37a1.51 1.51 0 0 0-1.307-1.23l-2.496-.286-.114.994 2.497.286a.502.502 0 0 1 .435.41l1.9 10.853-.826 1.301A1.497 1.497 0 0 0 6 18.94v.153a1.5 1.5 0 1 0 1 0V19h11.5a.497.497 0 0 1 .356.15 1.502 1.502 0 1 0 1.074-.08A1.497 1.497 0 0 0 18.5 18H6.416a.5.5 0 0 1-.422-.768zM19.5 21a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zm-13 0a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zM21.86 7l-1.757 7.027-13.188.942L5.52 7z"/>
+                                <path fill="none" d="M0 0h24v24H0z"/>
+                            </svg>
+                        </Link>
                     </motion.span>
+
                     <motion.span 
                         className='w-1/2 cursor-pointer'
                         whileHover={{ scale: 1.2 }}
@@ -80,6 +114,8 @@ const Navbar = () => {
                             <path d="M20.5899 22C20.5899 18.13 16.7399 15 11.9999 15C7.25991 15 3.40991 18.13 3.40991 22" stroke="#292D32" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </motion.span>
+
+                    {/* Account dropdown menu */}
                     <motion.div
                         className='flex justify-center items-center fixed w-[7rem] h-28 flex-col gap-2 right-0 top-[4.88rem] bg-white border-gray-300 border-l-2 border-b-2 rounded-bl-lg'
                         initial={{ x: '120%' }}
@@ -131,3 +167,26 @@ const Navbar = () => {
 }
  
 export default Navbar;
+
+/*
+OLD CART MENU POPUP
+
+<motion.div
+    className='flex justify-center fixed flex-col gap-2 right-0 top-[4.88rem] bg-white border-gray-300 border-l-2 border-b-2 rounded-bl-lg'
+    initial={{ x: '120%' }}
+    animate={isCartOpen ? { x: 0, transition: { ease: 'easeInOut', duration: 0.3 } } : { x: '120%' }}
+    >
+    <h1>Your Cart</h1>
+    {cartItems.length === 0 ? (
+        <p className='text-center'>Your cart is empty</p>
+    ) : (
+        cartItems.map((item) => (
+            <div key={item.id} className='flex'>
+                <span>{item.title}</span>
+                <span>{item.quantity}</span>
+            </div>
+        ))
+    )}
+</motion.div>
+
+*/

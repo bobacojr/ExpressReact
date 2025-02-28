@@ -13,7 +13,7 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt); // Hash the password
 
     const q = "INSERT INTO users (`username`, `password`, `email`, `role`) VALUES (?)";
-    const values = [username, hashedPassword, email, role || "user"];
+    const values = [username, hashedPassword, email, role || "user"]; // Default role is user
 
     db.query(q, [values], (error, data) => {
         if (error) {
@@ -23,7 +23,7 @@ router.post("/register", async (req, res) => {
             });
         }
         return res.status(201).json({ // Successful query
-            message: "User registered successfully",
+            message: "Registration successfully",
             data: data
         });
     });
@@ -31,7 +31,106 @@ router.post("/register", async (req, res) => {
 
 // User Login
 router.post("/login", async (req, res) => {
-    const { username, password, role } = req.body;
+    const { username, password } = req.body;
+
+    const q = "SELECT * FROM users WHERE username = ?";
+    db.query(q, [username], async (error, data) => {
+        if (error) {
+            return res.status(500).json({
+                message: "An error occurred while logging in",
+                error: error.message,
+            });
+        }
+        if (data.length === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const user = data[0];
+        const validPassword = await bcrypt.compare(password, user.password); // Compare passwords
+        if (!validPassword) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
+
+        req.session.userID = user.id;
+        req.session.username = user.username;
+        req.session.role = user.role;
+
+        return res.status(200).json({
+            message: "Login successful", 
+            user: {
+                id: user.id,
+                username: user.username,
+                role: user.role
+            }
+        });
+    });
+});
+
+// User logout
+router.post('/logout', (req, res) => {
+    req.session.destroy((error) => {
+        if (error) {
+            return res.status(500).json({
+                message: "Failed to logout"
+            });
+        }
+        res.clearCookie('connect.sid'); // Clear the session cookie
+        return res.status(200).json({
+            message: "Logged out successfully"
+        });
+    });
+});
+
+// Get the current user
+router.get('/me', (req, res) => {
+    if (req.session.userID) {
+        return res.status(200).json({
+            user: {
+                id: req.session.userID,
+                username: req.session.username,
+                role: req.session.role
+            }
+        });
+    } else {
+        return res.status(401).json({
+            message: "Not authenticated"
+        });
+    }
+});
+
+export default router;
+
+/*
+JWT-BASED LOGIN/REGISTRATION
+----------------------------
+
+// User Registration
+router.post("/register", async (req, res) => {
+    const { username, password, email, role } = req.body;
+
+    const salt = await bcrypt.genSalt(10); // Generate a salt
+    const hashedPassword = await bcrypt.hash(password, salt); // Hash the password
+
+    const q = "INSERT INTO users (`username`, `password`, `email`, `role`) VALUES (?)";
+    const values = [username, hashedPassword, email, role || "user"]; // Default role is user
+
+    db.query(q, [values], (error, data) => {
+        if (error) {
+            return res.status(500).json({ // Error
+                message: "An error occurred while registering the user",
+                error: error.message,
+            });
+        }
+        return res.status(201).json({ // Successful query
+            message: "Registration successfully",
+            data: data
+        });
+    });
+});
+
+// User Login
+router.post("/login", async (req, res) => {
+    const { username, password } = req.body;
 
     const q = "SELECT * FROM users WHERE username = ?";
     db.query(q, [username], async (error, data) => {
@@ -66,3 +165,5 @@ router.post("/login", async (req, res) => {
 });
 
 export default router;
+
+*/

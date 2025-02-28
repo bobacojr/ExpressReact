@@ -4,6 +4,12 @@ interface Product {
     description: string,
     image: string,
     price: number,
+    author: string,
+    brand: string,
+    model: string,
+    size: string,
+    quantity: number,
+    category_id: number,
 }
 
 interface Category {

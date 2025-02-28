@@ -1,7 +1,7 @@
 "use client"
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from "@/app/(components)/axiosConfig";
 import Image from 'next/image';
 import Navbar from '@/app/(components)/navbar/page';
 
@@ -37,16 +37,9 @@ const EditProduct = () => {
         if (!product_id) return; // Ensure product_id is defined
         
         const fetchProduct = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.log("No token found, please log in");
-                return;
-            }
             try {
                 const res = await axios.get(`http://localhost:8080/products/${product_id}`, {
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    },
+                    withCredentials: true,
                 });
                 const productData = res.data.data[0];
                 setProduct({
@@ -70,7 +63,9 @@ const EditProduct = () => {
         };
         const fetchCategories = async () => {
             try {
-                const res = await axios.get("http://localhost:8080/categories");
+                const res = await axios.get("http://localhost:8080/categories", {
+                    withCredentials: true,
+                });
                 setCategories(res.data);
             } catch (error) {
                 console.error("Failed to fetch categories:", error);
@@ -102,11 +97,6 @@ const EditProduct = () => {
     }
 
     const handleSubmit = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.log("No token found, please log in");
-            return;
-        }
 
         const formData = new FormData();
         formData.append("title", product.title);
@@ -124,9 +114,9 @@ const EditProduct = () => {
         }
         try {
             const res = await axios.put(`http://localhost:8080/products/${product_id}`, formData, {
+                withCredentials: true,
                 headers: {
                     "Content-Type": "multipart/form-data",
-                    Authorization: `Bearer ${token}` // Add token for user auth
                 },
             });
             if (res.status === 200) {
@@ -142,17 +132,9 @@ const EditProduct = () => {
     };
 
     const handleDelete = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.log("No token found, please log in");
-            return;
-        }
-
         try {
             const res = await axios.delete(`http://localhost:8080/products/${product_id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
+                withCredentials: true,
             });
             if (res.status === 200) {
                 router.push('/');
@@ -182,13 +164,13 @@ const EditProduct = () => {
                         <button
                             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                             onClick={() => { handleDelete(); setIsDeleteModalOpen(false); }}
-                        >
+                            >
                             Yes
                         </button>
                         <button
                             className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                             onClick={() => setIsDeleteModalOpen(false)}
-                        >
+                            >
                             No
                         </button>
                     </div>
@@ -208,13 +190,13 @@ const EditProduct = () => {
                         <button
                             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                             onClick={() => { handleSubmit(); setIsUpdateModalOpen(false); }}
-                        >
+                            >
                             Yes
                         </button>
                         <button
                             className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                             onClick={() => setIsUpdateModalOpen(false)}
-                        >
+                            >
                             No
                         </button>
                     </div>
@@ -235,15 +217,15 @@ const EditProduct = () => {
                     Edit Product
                 </h1>
                 <form
-                    className='flex flex-col gap-2 justify-center items-center border-2 border-red-600'
+                    className='flex flex-col justify-center  border-2 border-gray-300 rounded-lg p-2 gap-1'
                     encType="multipart/form-data"
-                >
+                    >
                     <input
                         className='border-2 border-gray-300 rounded-md'
                         type="file"
                         name="image"
                         onChange={handleFileChange}
-                    />
+                        />
                     {product.existingImage && (
                         <div className='flex flex-col justify-center items-center'>
                             <p>Current Image</p>
@@ -258,46 +240,71 @@ const EditProduct = () => {
                             />
                         </div>
                     )}
-                    <input
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text"
-                        name="title"
-                        placeholder="Product Title"
-                        value={product.title}
-                        onChange={handleInputChange}
-                    />
-                    <input
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text"
-                        name="description"
-                        placeholder="Product Description"
-                        value={product.description}
-                        onChange={handleInputChange}
-                    />
-                    <input
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text"
-                        name="price"
-                        value={Number(product.price) || ""}
-                        placeholder={'0.00'}
-                        onChange={handleInputChange}
-                    />
-                    <select
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        name='category_id'
-                        value={product.category_id || ""}
-                        onChange={handleInputChange}
-                        required
-                        >
-                        <option value="">Select a category</option>
-                        {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className='flex flex-row'>
+                        <h1 className='font-semibold pr-1'>Title:</h1>
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text"
+                            name="title"
+                            placeholder="Product Title"
+                            value={product.title}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                    <div className='flex flex-row'>
+                        <h1 className='font-semibold pr-1'>Description:</h1>
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text"
+                            name="description"
+                            placeholder="Product Description"
+                            value={product.description}
+                            onChange={handleInputChange}
+                            />
+                    </div>
+                    <div className='flex flex-row'>
+                        <h1 className='font-semibold pr-1'>Price:</h1>
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text"
+                            name="price"
+                            value={Number(product.price) || ""}
+                            placeholder={'0.00'}
+                            onChange={handleInputChange}
+                            />
+                    </div>
+                    <div className='flex flex-row'>
+                        <h1 className='font-semibold pr-1'>Category:</h1>
+                        <select
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            name='category_id'
+                            value={product.category_id || ""}
+                            onChange={handleInputChange}
+                            required
+                            >
+                            <option value="">Select a category</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className='flex flex-row'>
+                        <h1 className='font-semibold pr-1'>Quantity:</h1>
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text"
+                            name="quantity"
+                            onChange={handleInputChange}
+                            value={product.quantity || ""}
+                            required
+                            />
+                    </div>
                     {getCategoryName(product.category_id) === "Clothes" && (
                         <>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Brand:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -305,7 +312,10 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.brand || ""}
                                 required
-                            />
+                                />
+                        </div>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Size:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -313,7 +323,10 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.size || ""}
                                 required
-                            />
+                                />
+                        </div>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Color:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -321,19 +334,14 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.color || ""}
                                 required
-                            />
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text"
-                                name="quantity"
-                                onChange={handleInputChange}
-                                value={product.quantity || ""}
-                                required
-                            />
+                                />
+                        </div>
                         </>
                     )}
                     {getCategoryName(product.category_id) === "Books" && (
                         <>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Author:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -341,11 +349,14 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.author || ""}
                                 required
-                            />
+                                />
+                        </div>                          
                         </>
                     )}
                     {getCategoryName(product.category_id) === "Electronics" && (
                         <>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Brand:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -353,7 +364,10 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.brand || ""}
                                 required
-                            />
+                                />
+                        </div>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Model:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -361,11 +375,14 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.model || ""}
                                 required
-                            />
+                                />
+                        </div>                                                       
                         </>
                     )}
                     {getCategoryName(product.category_id) === "Toys" && (
                         <>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Brand:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -373,11 +390,14 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.brand || ""}
                                 required
-                            />
+                                />
+                        </div>
                         </>
                     )}
                     {getCategoryName(product.category_id) === "Games" && (
                         <>
+                        <div className='flex flex-row'>
+                            <h1 className='font-semibold pr-1'>Brand:</h1>
                             <input
                                 className='border-2 border-gray-300 rounded-md pl-1 w-full'
                                 type="text"
@@ -385,7 +405,8 @@ const EditProduct = () => {
                                 onChange={handleInputChange}
                                 value={product.brand || ""}
                                 required
-                            />
+                                />
+                        </div>
                         </>
                     )}
                     <div className='flex flex-col gap-2 p-2 items-center'>
