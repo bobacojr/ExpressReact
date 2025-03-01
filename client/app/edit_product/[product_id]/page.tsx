@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import axios from "@/app/(components)/axiosConfig";
 import Image from 'next/image';
 import Navbar from '@/app/(components)/navbar/page';
+import withAuth from '@/app/(components)/ProtectedRoute';
 
 interface Category {
     id: number;
@@ -428,4 +429,4 @@ const EditProduct = () => {
     );
 };
 
-export default EditProduct;
+export default withAuth(EditProduct);

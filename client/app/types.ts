@@ -20,3 +20,7 @@ interface Category {
 interface addProductProps {
     addProduct: (newProduct: Product) => void;
 }
+
+type AuthProps = {
+
+}

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '../(components)/navbar/page';
 import axios from '../(components)/axiosConfig';
 import { useRouter } from 'next/navigation';
+import withAuth from '../(components)/ProtectedRoute';
 
 const AddCategories = () => {
     const router = useRouter();
@@ -85,4 +86,4 @@ const AddCategories = () => {
      );
 }
  
-export default AddCategories;
+export default withAuth(AddCategories);

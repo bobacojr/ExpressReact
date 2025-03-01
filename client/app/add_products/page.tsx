@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from '../(components)/axiosConfig';
 import { useRouter } from 'next/navigation';
 import Navbar from '../(components)/navbar/page';
-
+import withAuth from '../(components)/ProtectedRoute';
 
 const AddProduct = () => {
     const router = useRouter();
@@ -292,4 +292,4 @@ const AddProduct = () => {
      );
 }
  
-export default AddProduct;
+export default withAuth(AddProduct);

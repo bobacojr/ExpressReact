@@ -103,15 +103,18 @@ router.get('/', verifySession, (req, res) => {
     });
 });
 
-// Delete product from cart
-router.delete('/remove/:product_id', verifySession, checkRole(['admin']), async (req, res) => {
-    const { product_id } = req.params.id;
-    const user_id = req.session.userID; // User id from session
-    const q = "DELETE FROM cart WHERE user_id = ? AND product_id = ?";
-    db.query(q, [user_id, product_id], (error, data) => {
+// Update product quantity in cart
+router.put('/update/:id', verifySession, (req, res) => {
+    const id = req.params.id;
+    const { quantity } = req.body;
+    const user_id = req.session.userID;
+
+    // Check if the product exists in the cart
+    const check_q = "SELECT quantity FROM cart WHERE user_id = ? AND id = ?";
+    db.query(check_q, [user_id, id], (error, data) => {
         if (error) {
             return res.status(500).json({
-                message: "An error occurred while deleting the product from your cart",
+                message: "An error occurred when fetching the product from your cart",
                 error: error.message
             });
         }
@@ -120,10 +123,77 @@ router.delete('/remove/:product_id', verifySession, checkRole(['admin']), async 
                 message: "Product not found in your cart"
             });
         }
-        return res.status(200).json({
-            message: "Product successfully removed from your cart",
-            data: data
+
+        // Update the quantity
+        const update_q = "UPDATE cart SET quantity = ? WHERE user_id = ? AND id = ?"
+        db.query(update_q, [quantity, user_id, id], (error, data) => {
+            if (error) {
+                return res.status(500).json({
+                    message: "An error occurred while updating the products quantity",
+                    error: error.message
+                });
+            }
+            return res.status(200).json({
+                message: "Product quantity successfully updated",
+                data: data
+            });
         });
+    });
+});
+
+// Delete/Update product item from cart
+router.delete('/remove/:id', verifySession, async (req, res) => {
+    const id = req.params.id;
+    const quantity = req.body.quantity;
+    const user_id = req.session.userID;
+    console.log(`product_id: ${id}, quantity: ${quantity}, user_id: ${user_id}`)
+
+    // Check if the product exists in the cart
+    const check_q = "SELECT quantity FROM cart WHERE user_id = ? AND id = ?"
+    db.query(check_q, [user_id, id], (error, data) => {
+        if (error) {
+            return res.status(500).json({
+                message: "An error occurred while fetching the product in your cart",
+                error: error.message
+            });
+        }
+        if (data.length === 0) {
+            return res.status(404).json({
+                message: "Product not found in your cart"
+            });
+        }
+
+        // Delete product(s)
+        const currentQuantity = data[0].quantity;
+        if (quantity >= currentQuantity) {
+            const delete_q = "DELETE FROM cart WHERE user_id = ? AND id = ?"
+            db.query(delete_q, [user_id, id], (error, data) => {
+                if (error) {
+                    return res.status(500).json({
+                        message: "An error occurred while removing the products from your cart",
+                        error: error.message
+                    });
+                }
+                return res.status(200).json({
+                    message: "Selected product(s) have been removed from your cart",
+                    data: data
+                });
+            });
+        } else { // Update quantity
+            const update_q = "UPDATE cart SET quantity = quantity - ? WHERE user_id = ? AND id = ?";
+            db.query(update_q, [quantity, user_id, id], (error, data) => {
+                if (error) {
+                    return res.status(500).json({
+                        message: "An error occurred while updating the product quantity",
+                        error: error.message
+                    });
+                }
+                return res.status(200).json({
+                    message: "Product quantity successfully updated",
+                    data: data
+                });
+            });
+        }
     });
 });
 

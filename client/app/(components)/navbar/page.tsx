@@ -1,11 +1,11 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import * as variants from '../variants/variants';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from '../axiosConfig';
+import withAuth from '../ProtectedRoute';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -166,27 +166,4 @@ const Navbar = () => {
      );
 }
  
-export default Navbar;
-
-/*
-OLD CART MENU POPUP
-
-<motion.div
-    className='flex justify-center fixed flex-col gap-2 right-0 top-[4.88rem] bg-white border-gray-300 border-l-2 border-b-2 rounded-bl-lg'
-    initial={{ x: '120%' }}
-    animate={isCartOpen ? { x: 0, transition: { ease: 'easeInOut', duration: 0.3 } } : { x: '120%' }}
-    >
-    <h1>Your Cart</h1>
-    {cartItems.length === 0 ? (
-        <p className='text-center'>Your cart is empty</p>
-    ) : (
-        cartItems.map((item) => (
-            <div key={item.id} className='flex'>
-                <span>{item.title}</span>
-                <span>{item.quantity}</span>
-            </div>
-        ))
-    )}
-</motion.div>
-
-*/
+export default withAuth(Navbar);
