@@ -116,10 +116,14 @@ router.get("/:id", async (req, res) => {
 
 // Update existing product by id (admin only)
 router.put("/:id", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
+    console.log("Request Body:", req.body);
+    console.log("Request File:", req.file);
     const product_id = req.params.id;
     const user_id = req.session.userID;
     const { title, description, price, category_id, size, color, author, brand, model, quantity } = req.body;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
+    console.log("Request Body:", req.body);
+    console.log("Request File:", req.file);
     let q = "UPDATE products SET ";
 
     const values = []; // Stores the values for each update

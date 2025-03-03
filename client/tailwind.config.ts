@@ -9,7 +9,7 @@ export default {
   theme: {
     extend: {
       screens: {
-        'xs': '500px'
+        'xs': '387px'
       },
       colors: {
         background: "var(--background)",
@@ -19,3 +19,4 @@ export default {
   },
   plugins: [],
 } satisfies Config;
+ 

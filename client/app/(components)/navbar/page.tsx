@@ -16,6 +16,8 @@ const Navbar = () => {
     const [username, setUsername] = useState('');
     const router = useRouter();
 
+    const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
     useEffect(() => {
         const checkAuthentication = async () => {
             try {
@@ -28,7 +30,19 @@ const Navbar = () => {
                 console.error("Authentication check failed");
             }
         };
+
+        const fetchCart = async () => {
+            try {
+                const res = await axios.get("http://localhost:8080/cart", {
+                    withCredentials: true
+                });
+                setCartItems(res.data.data);
+            } catch (error) {
+                console.error("Failed to fetch cart:", error);
+            }
+        };
         checkAuthentication();
+        fetchCart();
     }, []);
 
     const handleIsOpenClick = () => {
@@ -44,7 +58,19 @@ const Navbar = () => {
         if (!isCartOpen) {
             await fetchCart();
         }
-    }
+    };
+
+    const fetchCart = async () => {
+        try {
+            const res = await axios.get("http://localhost:8080/cart", {
+                withCredentials: true,
+            });
+            setCartItems(res.data.data);
+        } catch (error) {
+            console.error("Failed to fetch cart:", error);
+        }
+    };
+
 
     const handleSignOut = async () => {
         try {
@@ -57,18 +83,8 @@ const Navbar = () => {
         }
     };
 
-    const fetchCart = async () => {
-        try {
-            const res = await axios.get("http://localhost:8080/cart");
-            console.log(`CartItems: ${res.data}`)
-            setCartItems(res.data.data);
-        } catch (error) {
-            console.error("Failed to fetch cart:", error);
-        }
-    };
-
     return ( 
-        <div className="flex w-screen h-20 overflow-x-hidden bg-white border-b-2 border-gray-300">
+        <div className="flex w-screen h-20 overflow-x-hidden bg-white shadow-xl">
             <div className='flex flex-row w-full h-auto items-center justify-between'>
                 <motion.div className='flex flex-col ml-6 w-16 h-auto justify-center'
                     onClick={handleIsOpenClick}
@@ -89,19 +105,27 @@ const Navbar = () => {
                 </div>
 
                 <div className='flex gap-3 justify-between items-center mr-8 w-16 h-auto'>
-                    <motion.span 
-                        className='w-1/2 cursor-pointer'
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={handleCartClick}
-                        >
-                        <Link href="/show_cart">
-                            <svg width="25px" height="25px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6.787 15.981l14.11-1.008L23.141 6H5.345L5.06 4.37a1.51 1.51 0 0 0-1.307-1.23l-2.496-.286-.114.994 2.497.286a.502.502 0 0 1 .435.41l1.9 10.853-.826 1.301A1.497 1.497 0 0 0 6 18.94v.153a1.5 1.5 0 1 0 1 0V19h11.5a.497.497 0 0 1 .356.15 1.502 1.502 0 1 0 1.074-.08A1.497 1.497 0 0 0 18.5 18H6.416a.5.5 0 0 1-.422-.768zM19.5 21a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zm-13 0a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zM21.86 7l-1.757 7.027-13.188.942L5.52 7z"/>
-                                <path fill="none" d="M0 0h24v24H0z"/>
-                            </svg>
-                        </Link>
-                    </motion.span>
+                    <motion.div className='relative cursor-pointer'
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleCartClick}
+                    >
+                        <motion.span 
+                            className='cursor-pointer'>
+                            <Link href="/show_cart">
+                                <svg width="25px" height="25px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6.787 15.981l14.11-1.008L23.141 6H5.345L5.06 4.37a1.51 1.51 0 0 0-1.307-1.23l-2.496-.286-.114.994 2.497.286a.502.502 0 0 1 .435.41l1.9 10.853-.826 1.301A1.497 1.497 0 0 0 6 18.94v.153a1.5 1.5 0 1 0 1 0V19h11.5a.497.497 0 0 1 .356.15 1.502 1.502 0 1 0 1.074-.08A1.497 1.497 0 0 0 18.5 18H6.416a.5.5 0 0 1-.422-.768zM19.5 21a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zm-13 0a.5.5 0 1 1 .5-.5.5.5 0 0 1-.5.5zM21.86 7l-1.757 7.027-13.188.942L5.52 7z"/>
+                                    <path fill="none" d="M0 0h24v24H0z"/>
+                                </svg>
+                            </Link>
+                        </motion.span>
+                        
+                        {totalQuantity > 0 && (
+                            <div className='absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'>
+                                {totalQuantity}
+                            </div>
+                        )}
+                    </motion.div>
 
                     <motion.span 
                         className='w-1/2 cursor-pointer'
@@ -115,7 +139,6 @@ const Navbar = () => {
                         </svg>
                     </motion.span>
 
-                    {/* Account dropdown menu */}
                     <motion.div
                         className='flex justify-center items-center fixed w-[7rem] h-28 flex-col gap-2 right-0 top-[4.88rem] bg-white border-gray-300 border-l-2 border-b-2 rounded-bl-lg'
                         initial={{ x: '120%' }}

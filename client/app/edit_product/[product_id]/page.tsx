@@ -98,7 +98,6 @@ const EditProduct = () => {
     }
 
     const handleSubmit = async () => {
-
         const formData = new FormData();
         formData.append("title", product.title);
         formData.append("description", product.description);
@@ -125,7 +124,7 @@ const EditProduct = () => {
             }
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                console.error("Failed to update product:", error);
+                console.error("Failed to update product:", error.response?.data);
             } else {
                 console.error("Error submitting form:", error);
             }
@@ -229,7 +228,7 @@ const EditProduct = () => {
                         />
                     {product.existingImage && (
                         <div className='flex flex-col justify-center items-center'>
-                            <p>Current Image</p>
+                            <p className='font-semibold'>Current Image:</p>
                             <Image
                                 src={`http://localhost:8080/${product.existingImage}`}
                                 alt={product.title}
@@ -411,14 +410,14 @@ const EditProduct = () => {
                         </>
                     )}
                     <div className='flex flex-col gap-2 p-2 items-center'>
-                        <button type='button' className='border-2 border-gray-300 w-[6em] rounded-lg font-semibold' onClick={handleCancel}>
+                        <button type='button' className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={handleCancel}>
                             Cancel Edit
                         </button>
                         <div className='flex flex-row gap-2'>
-                            <button type="button" className='border-2 border-gray-300 w-[7em] rounded-lg font-semibold' onClick={() => setIsUpdateModalOpen(true)}>
+                            <button type="button" className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={() => setIsUpdateModalOpen(true)}>
                                 Save Changes
                             </button>
-                            <button type="button" className='border-2 border-gray-300 w-[8em] rounded-lg font-semibold' onClick={() => setIsDeleteModalOpen(true)}>
+                            <button type="button" className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={() => setIsDeleteModalOpen(true)}>
                                 Delete Product
                             </button>
                         </div>

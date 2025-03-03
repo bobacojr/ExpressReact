@@ -4,10 +4,11 @@ interface Product {
     description: string,
     image: string,
     price: number,
+    size: string,
+    color: string,
     author: string,
     brand: string,
     model: string,
-    size: string,
     quantity: number,
     category_id: number,
 }
@@ -21,6 +22,24 @@ interface addProductProps {
     addProduct: (newProduct: Product) => void;
 }
 
-type AuthProps = {
+interface ProductsProps {
+    addingToCart: boolean;
+    onAddingToCart: () => void;
+    onClosePopup: () => void;
+    cartItems: CartItem[];
+    fetchCart: () => Promise<void>;
+}
 
+interface CartItem {
+    id: number;
+    product_id: number;
+    quantity: number;
+    title: string;
+    price: number;
+    image: string;
+}
+
+interface NavbarProps {
+    cartItems: CartItem[];
+    fetchCart: () => Promise<void>;
 }
