@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '../(components)/ProtectedRoute';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { filter } from 'motion/react-client';
 
 const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps) => {
     const router = useRouter();
@@ -16,6 +17,8 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     const [userRole, setUserRole] = useState<string | null>(null);
     
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null); // Used to display the selected product
+    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const slidingMenuRef = useRef<HTMLDivElement>(null); // Ref for the add-to-cart sliding menu
 
     const fetchUserRole = async () => {
@@ -63,6 +66,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                     withCredentials: true,
                 });
                 setProducts(res.data);
+                setFilteredProducts(res.data);
             } catch (error) {
                 console.log(error);
             }
@@ -78,6 +82,19 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         fetchAllProducts();
         fetchCategories();
     }, [currentCategory]);
+
+    useEffect(() => {
+        const filtered = products.filter((product) => {
+            const category = categories.find((cat) => cat.id === product.category_id);
+            const categoryName = category ? category.name.toLowerCase() : '';
+            return (
+                product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                categoryName.includes(searchQuery.toLowerCase())
+            );
+        });
+        setFilteredProducts(filtered);
+    }, [searchQuery, products, categories]);
 
     // Add product to cart
     const addToCart = async (product_id: number) => {
@@ -119,7 +136,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                     value={currentCategory}
                     onChange={(e) => setCurrentCategory(e.target.value)}
                     className='border-2 border-gray-300 rounded-lg p-2 mb-4'
-                >
+                    >
                     <option value="All">All</option>
                     {categories.map((category) => (
                         <option key={category.id} value={category.id}>
@@ -127,8 +144,15 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                         </option>
                     ))}
                 </select>
+                <input
+                    type='text'
+                    placeholder='Search...'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className='border-2 border-gray-300 rounded-lg p-2 mb-4 w-full max-w-lg'
+                    />
                 <div className='grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 w-[17em] sm:w-full'>
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                         <div key={product.id} className='flex flex-col w-full border-2 items-center border-gray-300 rounded-lg'>
                             <Link href={`/show_product/${product.id}`} className='w-full'>
                                 <div className='w-full relative h-52'>

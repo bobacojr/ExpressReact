@@ -10,7 +10,6 @@ export default function Home() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,7 +21,6 @@ export default function Home() {
         router.push('/login');
       }
     };
-
     checkAuth();
   }, [router]);
 
@@ -54,10 +52,15 @@ export default function Home() {
         )}
       </AnimatePresence>
       <div className="fixed top-0 left-0 w-full z-10">
-        <Navbar />
+        <Navbar 
+          />
       </div>
       <div className="flex w-full mt-24">
-        <Products addingToCart={addingToCart} onAddingToCart={handleAddingToCart} onClosePopup={handleClosePopup} />
+        <Products 
+          addingToCart={addingToCart} 
+          onAddingToCart={handleAddingToCart} 
+          onClosePopup={handleClosePopup}
+          />
       </div>
     </div>
   );

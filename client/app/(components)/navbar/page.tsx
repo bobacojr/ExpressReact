@@ -6,17 +6,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from '../axiosConfig';
 import withAuth from '../ProtectedRoute';
+import { useCart } from "../context/CartContext";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isAccount, setIsAccount] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
-    const [cartItems, setCartItems] = useState<Product[]>([]);
+    const { cartItems, fetchCart } = useCart();
     const [username, setUsername] = useState('');
     const router = useRouter();
 
-    const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalQuantity = (cartItems || []).reduce((sum, item) => sum + item.quantity, 0);
 
     useEffect(() => {
         const checkAuthentication = async () => {
@@ -30,20 +31,16 @@ const Navbar = () => {
                 console.error("Authentication check failed");
             }
         };
-
-        const fetchCart = async () => {
+        const fetchCartData = async () => {
             try {
-                const res = await axios.get("http://localhost:8080/cart", {
-                    withCredentials: true
-                });
-                setCartItems(res.data.data);
+                await fetchCart();
             } catch (error) {
                 console.error("Failed to fetch cart:", error);
             }
         };
         checkAuthentication();
-        fetchCart();
-    }, []);
+        fetchCartData();
+    }, [fetchCart]);
 
     const handleIsOpenClick = () => {
         setIsOpen((prev) => !prev);
@@ -59,18 +56,6 @@ const Navbar = () => {
             await fetchCart();
         }
     };
-
-    const fetchCart = async () => {
-        try {
-            const res = await axios.get("http://localhost:8080/cart", {
-                withCredentials: true,
-            });
-            setCartItems(res.data.data);
-        } catch (error) {
-            console.error("Failed to fetch cart:", error);
-        }
-    };
-
 
     const handleSignOut = async () => {
         try {

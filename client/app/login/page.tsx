@@ -69,7 +69,7 @@ const LoginForm = () => {
                 </div>
                 <button 
                     type="submit"
-                    className='border-2 border-gray-300 w-[4.6em] rounded-lg font-semibold p-1'
+                    className='border-2 border-gray-300 pl-3 pr-3 rounded-2xl font-semibold p-1'
                     >
                     Sign in
                 </button>
@@ -77,7 +77,7 @@ const LoginForm = () => {
                     OR
                 </span>
                 <button
-                    className='border-2 border-gray-300 w-[9em] rounded-lg font-semibold p-1'
+                    className='border-2 border-gray-300 pl-3 pr-3 rounded-2xl font-semibold p-1'
                     type='button'
                     onClick={handleSignIn}
                     >

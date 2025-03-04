@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LayoutTransition } from "./(components)/LayoutTransition";
+import CartProviderWrapper from "./CartProviderWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,14 +28,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <LayoutTransition
-            className="overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.3 }}}
-            >
-            {children}
-        </LayoutTransition>
+        <CartProviderWrapper>
+          <LayoutTransition
+              className="overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.3 }}}
+              >
+              {children}
+          </LayoutTransition>
+        </CartProviderWrapper>
       </body>
     </html>
   );
