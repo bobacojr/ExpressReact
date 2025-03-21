@@ -60,6 +60,7 @@ const EditProduct = () => {
                 setIsLoading(false);
             } catch (error) {
                 setIsLoading(false);
+                console.log("An error occurred whil attempting to fetch the product: ", error);
             }
         };
         const fetchCategories = async () => {

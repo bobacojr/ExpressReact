@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import axios from '../(components)/axiosConfig';
 import { useRouter } from 'next/navigation';
+import { motion } from 'motion/react';
 
 const LoginForm = () => {
     const [username, setUsername] = useState("");
@@ -21,6 +22,7 @@ const LoginForm = () => {
             router.push('/'); // Move to home page
         } catch (error) {
             setMessage("Invalid username or password, please try again");
+            console.log("An error occurred while attempting to login: ", error);
         }
     };
 
@@ -44,7 +46,7 @@ const LoginForm = () => {
                 </svg>
             </div>
             <form onSubmit={handleSubmit} className='flex flex-col w-full justify-center items-center gap-2 mt-2'>
-                <div className='flex justify-center items-center w-full mt-2'>
+                <div className='flex justify-center items-center w-full mt-2 pl-1 pr-1'>
                     <input
                         type="text"
                         autoComplete='true'
@@ -56,7 +58,7 @@ const LoginForm = () => {
                         className='flex w-full max-w-[30em] border-2 border-gray-300 rounded-lg p-1'
                         />
                 </div>
-                <div className='flex justify-center items-center w-full'>
+                <div className='flex justify-center items-center w-full pl-1 pr-1'>
                     <input
                         type="password"
                         name='password'
@@ -67,22 +69,26 @@ const LoginForm = () => {
                         className='flex w-full max-w-[30em] border-2 border-gray-300 rounded-lg p-1'
                         />
                 </div>
-                <button 
+                <motion.button 
                     type="submit"
                     className='border-2 border-gray-300 pl-3 pr-3 rounded-2xl font-semibold p-1'
+                    whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e"  }}
+                    whileTap={{ scale: 0.9 }}
                     >
                     Sign in
-                </button>
+                </motion.button>
                 <span className='flex items-center justify-center font-semibold'>
                     OR
                 </span>
-                <button
+                <motion.button
                     className='border-2 border-gray-300 pl-3 pr-3 rounded-2xl font-semibold p-1'
                     type='button'
+                    whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e"  }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={handleSignIn}
                     >
                     Register Account
-                </button>
+                </motion.button>
             </form>
             {message && 
                 <p className='flex mt-3 border-2 border-gray-300 rounded-lg p-2 text-red-700'>

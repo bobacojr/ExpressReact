@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '../(components)/ProtectedRoute';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { filter } from 'motion/react-client';
+import { useCart } from '../(components)/context/CartContext';
 
 const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps) => {
     const router = useRouter();
@@ -20,6 +20,8 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const slidingMenuRef = useRef<HTMLDivElement>(null); // Ref for the add-to-cart sliding menu
+
+    const { fetchCart } = useCart();
 
     const fetchUserRole = async () => {
         try {
@@ -58,6 +60,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     }, [onClosePopup]); 
 
     useEffect(() => {
+        console.log("Fetching all products...");
         // Fetch all products
         const fetchAllProducts = async () => {
             try {
@@ -100,14 +103,14 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     const addToCart = async (product_id: number) => {
         try {
             const quantity = 1; // Will need to implement choosing a specific quantity
-            const res = await axios.post("http://localhost:8080/cart/add", 
+            await axios.post("http://localhost:8080/cart/add", 
                 { product_id: product_id, quantity: quantity },
                 { withCredentials: true },
             );
-            setIsProductAdded(true)
-        } catch (error: any) { // Will need to look into these error messages
-            console.error("Failed to add to cart:", error.response?.data || error.message);
-            alert(`Failed to add to cart: ${error.response?.data?.message || error.message}`);
+            setIsProductAdded(true);
+            fetchCart();
+        } catch (error) { // Will need to look into these error messages
+            console.error("Failed to add to cart:",  error);
         }
     };
 
@@ -162,7 +165,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                             alt={product.title} 
                                             sizes='(max-width: 200px)' 
                                             priority 
-                                            className='rounded-lg p-1' 
+                                            className='rounded-2xl pt-2' 
                                             style={{objectFit: "contain"}}
                                             />
                                     }
@@ -174,24 +177,26 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                             <h1 className='text-center text-sm font-semibold'>
                                 Price: ${product.price}
                             </h1>
-                            <p className='flex items-center overflow-hidden text-wrap whitespace-normal break-word h-16 w-full text-center justify-center'>
-                                {product.description}
-                            </p>
-                            <div className='flex flex-row'>
+                            
+                            <div className='flex flex-row gap-2'>
                                 {userRole === 'admin' && (
-                                    <button 
-                                        className='flex justify-center items-center border-2 border-gray-300 p-1 pr-2 pl-2 rounded-lg m-1'
+                                    <motion.button 
+                                        className='flex justify-center items-center border-2 border-gray-300 p-2 font-semibold rounded-xl mt-3 mb-3'
                                         onClick={() => handleEditClick(product.id)}
+                                        whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e" }}
+                                        whileTap={{ scale: 0.9 }}
                                         >
                                         Edit
-                                    </button>
+                                    </motion.button>
                                 )}
-                                <button 
-                                    className='flex justify-center items-center border-2 border-gray-300 p-1 pr-2 pl-2 rounded-lg m-1'
+                                <motion.button 
+                                    className='flex justify-center items-center border-2 border-gray-300 p-2 rounded-xl font-semibold mt-3 mb-3'
                                     onClick={() => handleAddingToCart(product)}
-                                >
+                                    whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e" }}
+                                    whileTap={{ scale: 0.9 }}
+                                    >
                                     Add to Cart
-                                </button>
+                                </motion.button>
                             </div>
                         </div>
                     ))}
@@ -280,6 +285,10 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                                 onClick={() => { onClosePopup(); setIsProductAdded(false) }}
                                                 whileHover={{ scale: 1.06, borderColor: "#ef4444", color: "#ef4444"  }}
                                                 whileTap={{ scale: 0.9 }}
+                                                initial={{ opacity: 0, x: '110%' }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
                                                 >
                                                 Continue Shopping
                                             </motion.button>
@@ -288,6 +297,10 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                                 onClick={handleViewCart}
                                                 whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e"  }}
                                                 whileTap={{ scale: 0.9 }}
+                                                initial={{ opacity: 0, x: '110%' }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
                                                 >
                                                 View Cart & Checkout
                                             </motion.button>
@@ -313,4 +326,4 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     );
 }
 
-export default withAuth(Products);
+export default withAuth<ProductsProps>(Products);

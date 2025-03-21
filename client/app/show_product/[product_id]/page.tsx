@@ -16,6 +16,21 @@ const ShowProduct = () => {
     const [quantity, setQuantity] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [isProductAdded, setIsProductAdded] = useState(false);
+    const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+    const [isSpecificationOpen, setIsSpecificationOpen] = useState(false);
+    const [isReviewsOpen, setIsReviewsOpen] = useState(false);
+
+    const toggleDescription = () => {
+        setIsDescriptionOpen(!isDescriptionOpen);
+    };
+
+    const toggleSpecification = () => {
+        setIsSpecificationOpen(!isSpecificationOpen);
+    };
+
+    const toggleReviews = () => {
+        setIsReviewsOpen(!isReviewsOpen);
+    }
 
     useEffect(() => {
         if (!product_id) return;
@@ -42,6 +57,7 @@ const ShowProduct = () => {
                 });
                 setIsLoading(false);
             } catch (error) {
+                console.log("Failed to fetch product: ", error);
                 setIsLoading(false);
             }
         }
@@ -100,11 +116,11 @@ const ShowProduct = () => {
     }
 
     return ( 
-        <div className="flex w-screen h-auto">
+        <div className="flex w-screen h-screen overflow-x-hidden">
             <div className="fixed top-0 left-0 w-full z-20">
                 <Navbar />
             </div>
-            <div className='flex flex-col justify-center sm:items-center w-full mt-24'>
+            <div className='flex flex-col mb-36 sm:items-center w-full h-full mt-24 p-1'>
             {isProductAdded ? (
                         <AnimatePresence>
                             <div className='flex flex-row items-center justify-center gap-2'>
@@ -127,20 +143,19 @@ const ShowProduct = () => {
                             </div>
                         </AnimatePresence>
                     ) : (
-                        <div className='text-2xl tracking-wider font-semibold'>
+                        <div className='flex text-xl sm:text-2xl tracking-wider font-semibold justify-center items-center'>
                             Selected Product
                         </div>
                     )}
-                <div className='flex flex-col sm:flex-row rounded-lg p-2 gap-1'>
+                <div className='flex flex-col w-full h-auto sm:w-3/4 sm:flex-row rounded-lg p-4 gap-1 border-2 border-gray-500'>
                     {product.image && (
-                        <div className='flex flex-col w-full justify-center items-center max-w-[60em]'>
+                        <div className='flex flex-col w-full justify-center items-center'>
                             <Image
                                 src={`http://localhost:8080/${product.image}`}
                                 alt={product.title}
-                                width={360}
-                                height={180}
+                                width={600}
+                                height={360}
                                 className='rounded-lg p-1'
-                                style={{ objectFit: "contain" }}
                                 priority
                             />
                         </div>
@@ -153,9 +168,6 @@ const ShowProduct = () => {
                                 </div>
                                 <div className='flex flex-row text-sm italic'>
                                     <p>{product.brand}</p>
-                                </div>
-                                <div className='flex flex-row'>
-                                    <p className='text-md text-gray-500'>{product.description}</p>
                                 </div>
                                 <div className='flex flex-row text-red-500 font-semibold'>
                                     <p>${product.price}</p>
@@ -170,9 +182,6 @@ const ShowProduct = () => {
                                 <div className='flex flex-row italic'>
                                     <p>{product.author}</p>
                                 </div>
-                                <div className='flex flex-row'>
-                                    <p className='text-md text-gray-500'>{product.description}</p>
-                                </div>
                                 <div className='flex flex-row text-red-500 font-semibold'>
                                     <p>${product.price}</p>
                                 </div>
@@ -185,9 +194,6 @@ const ShowProduct = () => {
                                 </div>
                                 <div className='flex flex-row text-sm italic'>
                                     <p>{product.brand}</p>
-                                </div>
-                                <div className='flex flex-row'>
-                                    <p className='text-md text-gray-500'>{product.description}</p>
                                 </div>
                                 <div className='flex flex-row text-red-500 font-semibold'>
                                     <p>${product.price}</p>
@@ -202,9 +208,6 @@ const ShowProduct = () => {
                                 <div className='flex flex-row text-sm italic'>
                                     <p>{product.brand}</p>
                                 </div>
-                                <div className='flex flex-row'>
-                                    <p className='text-md text-gray-500'>{product.description}</p>
-                                </div>
                                 <div className='flex flex-row text-red-500 font-semibold'>
                                     <p>${product.price}</p>
                                 </div>
@@ -217,9 +220,6 @@ const ShowProduct = () => {
                                 </div>
                                 <div className='flex flex-row text-sm italic'>
                                     <p>{product.brand}</p>
-                                </div>
-                                <div className='flex flex-row'>
-                                    <p className='text-md text-gray-500'>{product.description}</p>
                                 </div>
                                 <div className='flex flex-row text-red-500 font-semibold'>
                                     <p>${product.price}</p>
@@ -247,7 +247,7 @@ const ShowProduct = () => {
                                     </motion.button>
                                 </div>
                             ) : (
-                                <div className='flex flex-row w-full justify-center items-center mt-6 gap-6'>
+                                <div className='flex flex-row w-full items-center justify-center sm:justify-normal mt-6 gap-6'>
                                     <div className='flex border-2 border-gray-300 p-2 rounded-2xl'>
                                         <select
                                             value={quantity}
@@ -272,6 +272,104 @@ const ShowProduct = () => {
                             )}
                         </div>
                     </div>
+                </div>
+                <span className='flex flex-col font-semibold items-center text-xl sm:text-2xl mt-6'>
+                    Additional Details
+                </span>
+                <div className='flex flex-col w-full sm:w-3/4 border-2 border-gray-500 rounded-lg pl-3 pr-3'>
+                    <div className='flex w-full h-10 font-semibold text-xl sm:text-xl justify-between items-center border-b-2 border-gray-300 p-6'>
+                        <span>
+                            Description
+                        </span>
+                        <motion.svg
+                            initial={{ rotate: 0 }}
+                            animate={{ rotate: isDescriptionOpen ? -180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                            xmlns="http://www.w3.org/2000/svg" 
+                            viewBox="0 0 100 100" 
+                            width="24" 
+                            height="24" 
+                            className='stroke-black stroke-[10px] fill-none mr-4 cursor-pointer'
+                            onClick={toggleDescription}
+                            >
+                            <path d="M10,40 L50,80 L90,40" />
+                        </motion.svg>
+                    </div>
+                    <AnimatePresence>
+                        {isDescriptionOpen && (
+                            <motion.div className='flex flex-col justify-center w-full border-b-2 border-gray-300 pl-6'
+                                key='description'
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 80, opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                >
+                                    {product.description}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <div className='flex w-full h-10 font-semibold text-xl sm:text-xl justify-between items-center border-b-2 border-gray-300 p-6'>
+                        <span>
+                            Specifications
+                        </span>
+                        <motion.svg
+                            initial={{ rotate: 0 }}
+                            animate={{ rotate: isSpecificationOpen ? -180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                            xmlns="http://www.w3.org/2000/svg" 
+                            viewBox="0 0 100 100" 
+                            width="24" 
+                            height="24" 
+                            className='stroke-black stroke-[10px] fill-none mr-4 cursor-pointer'
+                            onClick={toggleSpecification}
+                            >
+                            <path d="M10,40 L50,80 L90,40" />
+                        </motion.svg>
+                    </div>
+                    <AnimatePresence>
+                        {isSpecificationOpen && (
+                            <motion.div className='flex flex-col justify-center w-full border-b-2 border-gray-300 pl-6'
+                                key='specifications'
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 80, opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                >
+                                    Enter text here...
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <div className='flex w-full h-10 font-semibold text-xl sm:text-xl justify-between items-center border-b-2 border-gray-300 p-6'>
+                        <span>
+                            Reviews
+                        </span>
+                        <motion.svg
+                            initial={{ rotate: 0 }}
+                            animate={{ rotate: isReviewsOpen ? -180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                            xmlns="http://www.w3.org/2000/svg" 
+                            viewBox="0 0 100 100" 
+                            width="24" 
+                            height="24" 
+                            className='stroke-black stroke-[10px] fill-none mr-4 cursor-pointer'
+                            onClick={toggleReviews}
+                            >
+                            <path d="M10,40 L50,80 L90,40" />
+                        </motion.svg>
+                    </div>
+                    <AnimatePresence>
+                        {isReviewsOpen && (
+                            <motion.div className='flex flex-col justify-center w-full pl-6'
+                                key='reviews'
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 80, opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                >
+                                    Enter text here...
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>

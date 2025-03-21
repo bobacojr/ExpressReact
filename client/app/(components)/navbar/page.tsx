@@ -28,7 +28,7 @@ const Navbar = () => {
             } catch (error) {
                 setIsLoggedIn(false);
                 setUsername('');
-                console.error("Authentication check failed");
+                console.error("Authentication check failed: ", error);
             }
         };
         const fetchCartData = async () => {
@@ -125,7 +125,7 @@ const Navbar = () => {
                     </motion.span>
 
                     <motion.div
-                        className='flex justify-center items-center fixed w-[7rem] h-28 flex-col gap-2 right-0 top-[4.88rem] bg-white border-gray-300 border-l-2 border-b-2 rounded-bl-lg'
+                        className='flex justify-center items-center fixed w-[7rem] h-28 flex-col gap-2 right-0 top-[4.88rem] bg-white shadow-xl rounded-bl-lg'
                         initial={{ x: '120%' }}
                         animate={isAccount ? { x: 0, transition: { ease: 'easeInOut', duration: 0.3 } } : { x: '120%' }}
                         >

@@ -4,72 +4,40 @@ import axios from '../(components)/axiosConfig';
 import Navbar from '../(components)/navbar/page';
 import { motion } from 'motion/react';
 import withAuth from '../(components)/ProtectedRoute';
+import Image from 'next/image';
+import { useCart } from '../(components)/context/CartContext';
 
 const ShowCart = () => {
-    const [cartItems, setCartItems] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [subtotal, setSubtotal] = useState<number>(0);
     const [totalQuantity, setTotalQuantity] = useState<number>(0);
-    const [quantityToRemove, setQuantityToRemove] = useState<number>(0);
+    const { cartItems, fetchCart } = useCart();
 
     const handleDelete = async (cart_id: number, quantity: number) => {
         console.log(`Quantity to remove: ${quantity}`)
         console.log(`id: ${cart_id}`)
         try {
-            const res = await axios.delete(`http://localhost:8080/cart/remove/${cart_id}`, {
+            await axios.delete(`http://localhost:8080/cart/remove/${cart_id}`, {
                 data: { quantity },
                 withCredentials: true,
             });
-            setCartItems(cartItems.filter(item => item.id !== cart_id ));
-
-            const newSubtotal = cartItems.reduce((sum, item) => {
-                if (item.id === cart_id) {
-                    return sum; // Exlude the deleted product
-                }
-                return sum + (item.price * item.quantity);
-            }, 0)
-
-            const newTotalQuantity = cartItems.reduce((sum, item) => {
-                if (item.id === cart_id) {
-                    return sum;
-                }
-                return sum + item.quantity;
-            }, 0)
-
-            setSubtotal(newSubtotal);
-            setTotalQuantity(newTotalQuantity);
-        } catch (error: any) {
+            await fetchCart();
+        } catch (error) {
             console.error("Error deleting item from cart:", error);
-            setError(error.message || "Failed to delete item from cart");
         }
     };
 
     const updateQuantity = async (cart_id: number, newQuantity: number) => {
         try {
-            const res = await axios.put(`http://localhost:8080/cart/update/${cart_id}`, {
+            await axios.put(`http://localhost:8080/cart/update/${cart_id}`, {
                 quantity: newQuantity,
             }, {
                 withCredentials: true
             });
-            setCartItems(cartItems.map(item => item.id === cart_id ? {...item, quantity: newQuantity} : item)); // If true shallow copy and update quantity value to newQuantity
-
-            /*
-            reduce: Iterate over the array and accumulate a single value, here we are finding the subtotal
-            (sum, item): Accumulator function
-                sum: Is the accumulator which holds the running total of the subtotal
-                item: The current item being processed in the array
-            
-            IF item.id === cart_id THEN USE newQuantity ELSE USE THE NORMAL QUANTITY
-            */
-            const newSubtotal = cartItems.reduce((sum, item) => sum + (item.price * (item.id === cart_id ? newQuantity : item.quantity)), 0);
-            const newTotalQuantity = cartItems.reduce((sum, item) => sum + (item.id === cart_id ? newQuantity : item.quantity), 0);
-
-            setSubtotal(newSubtotal);
-            setTotalQuantity(newTotalQuantity);
-        } catch (error: any) {
+            await fetchCart();
+        } catch (error) {
             console.error("Error updating item quantity:", error);
-            setError(error.message || "Failed to update item quantity");
         }
     }
 
@@ -78,21 +46,40 @@ const ShowCart = () => {
             setIsLoading(true);
             setError(null);
             try {
-                const res = await axios.get('http://localhost:8080/cart', {
-                    withCredentials: true
-                });
-                setCartItems(res.data.data);
-                setSubtotal(res.data.subtotal);
-                setTotalQuantity(res.data.total_quantity)
-            } catch (error: any) {
-                setError(error.message || "Failed to get your cart");
+                await fetchCart(); // Fetch cart data using the context
+            } catch (error) {
                 console.error("Error fetching cart:", error);
+                setError("Failed to fetch cart data.");
             } finally {
                 setIsLoading(false);
             }
         };
         getCart();
-    }, []);
+    }, [fetchCart]);
+
+    useEffect(() => {
+        // Calculate subtotal and total quantity whenever cartItems changes
+        /*
+            reduce: Iterate over the array and accumulate a single value, here we are finding the subtotal
+            (sum, item): Accumulator function
+                sum: Is the accumulator which holds the running total of the subtotal
+                item: The current item being processed in the array
+            
+            IF item.id === cart_id THEN USE newQuantity ELSE USE THE NORMAL QUANTITY
+        */
+        const newSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const newTotalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        setSubtotal(newSubtotal);
+        setTotalQuantity(newTotalQuantity);
+    }, [cartItems]);
+
+    if (isLoading) {
+        return <div>Loading cart...</div>;
+    }
+
+    if (error) {
+        return <div>Error: {error}</div>;
+    }
 
     if (isLoading) {
         return <div>Loading cart...</div>
@@ -124,7 +111,9 @@ const ShowCart = () => {
                     <ul className='flex flex-col gap-2 w-full max-w-lg'>
                         {cartItems.map((item) => (
                             <li key={item.id} className='flex flex-row w-full items-center p-2 gap- border-2 border-gray-300 rounded-lg shadow-md'>
-                                <img src={`http://localhost:8080/${item.image}`} 
+                                <Image src={`http://localhost:8080/${item.image}`}
+                                    width={80}
+                                    height={80}
                                     alt={item.title}
                                     className='w-20 h-20 object-cover' 
                                     />

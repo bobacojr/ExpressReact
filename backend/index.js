@@ -1,6 +1,7 @@
 /* Main JavaScript file */
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import authRoutes from "./routes/authRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
@@ -9,13 +10,15 @@ import session from "express-session";
 import cookieParser from "cookie-parser";
 
 const app = express();
-app.use(cookieParser());
 
 // Middleware
+app.use(cookieParser());
+app.use(helmet());
 app.use(cors({
     origin: 'http://localhost:3000',
     credentials: true
 }));
+
 app.use('/uploads', express.static('uploads'));
 app.use(express.json());
 

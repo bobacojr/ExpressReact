@@ -5,11 +5,13 @@ import Products from '@/app/products/page';
 import axios from './(components)/axiosConfig';
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from 'motion/react';
+import { useCart } from "./(components)/context/CartContext";
 
 export default function Home() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const { cartItems, fetchCart } = useCart();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -17,7 +19,7 @@ export default function Home() {
         await axios.get("http://localhost:8080/auth/me");
         setIsAuthenticated(true);
       } catch (error) {
-        console.log("Authentication check failed, please login");
+        console.log("Authentication check failed, please login: ", error);
         router.push('/login');
       }
     };
@@ -60,6 +62,8 @@ export default function Home() {
           addingToCart={addingToCart} 
           onAddingToCart={handleAddingToCart} 
           onClosePopup={handleClosePopup}
+          cartItems={cartItems}
+          fetchCart={fetchCart}
           />
       </div>
     </div>

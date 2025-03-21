@@ -31,15 +31,17 @@ interface ProductsProps {
 }
 
 interface CartItem {
-    id: number;
-    product_id: number;
-    quantity: number;
-    title: string;
-    price: number;
-    image: string;
+    id: number,
+    title: string,
+    description: string,
+    image: string,
+    price: number,
+    size: string,
+    color: string,
+    author: string,
+    brand: string,
+    model: string,
+    quantity: number,
+    category_id: number,
 }
 
-interface NavbarProps {
-    cartItems: CartItem[];
-    fetchCart: () => Promise<void>;
-}
