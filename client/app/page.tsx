@@ -54,8 +54,7 @@ export default function Home() {
         )}
       </AnimatePresence>
       <div className="fixed top-0 left-0 w-full z-10">
-        <Navbar 
-          />
+        <Navbar />
       </div>
       <div className="flex w-full mt-24">
         <Products 

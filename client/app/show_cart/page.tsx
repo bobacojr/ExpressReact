@@ -15,8 +15,6 @@ const ShowCart = () => {
     const { cartItems, fetchCart } = useCart();
 
     const handleDelete = async (cart_id: number, quantity: number) => {
-        console.log(`Quantity to remove: ${quantity}`)
-        console.log(`id: ${cart_id}`)
         try {
             await axios.delete(`http://localhost:8080/cart/remove/${cart_id}`, {
                 data: { quantity },
@@ -39,7 +37,18 @@ const ShowCart = () => {
         } catch (error) {
             console.error("Error updating item quantity:", error);
         }
-    }
+    };
+
+    const handleCheckout = async () => {
+        try {
+            await axios.post(`http://localhost:8080/cart/checkout`, {}, {
+                withCredentials: true
+            });
+            await fetchCart();
+        } catch (error) {
+            console.error("Checkout error:", error);
+        }
+    };
 
     useEffect(() => {
         const getCart = async () => {
@@ -108,10 +117,10 @@ const ShowCart = () => {
                         Your cart is currently empty... Lets do some shopping!
                     </p>
                 ) : (
-                    <ul className='flex flex-col gap-2 w-full max-w-lg'>
+                    <ul className='flex flex-col gap-2 w-full max-w-lg items-center'>
                         {cartItems.map((item) => (
                             <li key={item.id} className='flex flex-row w-full items-center p-2 gap- border-2 border-gray-300 rounded-lg shadow-md'>
-                                <Image src={`http://localhost:8080/${item.image}`}
+                                <Image src={`http://localhost:8080/${item.variant_image}`}
                                     width={80}
                                     height={80}
                                     alt={item.title}
@@ -121,9 +130,11 @@ const ShowCart = () => {
                                     <div className='flex flex-col pl-2'>
                                         <p>
                                             {item.title}
+                                            {item.variant_color ? ` - ${item.variant_color}` : ""}
+                                            {item.variant_size ? ` - ${item.variant_size}` : ""}
                                         </p>
                                         <p className='text-red-500 font-bold'>
-                                            ${item.price}
+                                            ${item.variant_price}
                                         </p>
                                         <div className='flex flex-row'>
                                             <select
@@ -137,12 +148,15 @@ const ShowCart = () => {
                                                     }
                                                 }}
                                                 >
-                                                {[...Array(20).keys()].map((num) => (
+                                                {[...Array(Math.max(item.variant_quantity + 1, 2)).keys()].slice(1).map((num) => (
                                                     <option key={num} value={num}>
                                                         Quantity: {num}
                                                     </option>
                                                 ))}
                                             </select>
+                                            <span className='flex text-orange-500 text-sm justify-center items-center'>
+                                                {`Only ${item.variant_quantity  } more available!`}
+                                            </span>
                                         </div>
                                     </div>
                                     <motion.div
@@ -157,6 +171,14 @@ const ShowCart = () => {
                                 </div>
                             </li>
                         ))}
+                        <motion.div 
+                            className='flex justify-center items-center mt-8 w-3/4 rounded-2xl p-1 font-semibold cursor-pointer border-2 border-gray-300'
+                            onClick={() => handleCheckout()}
+                            >
+                            <span>
+                                Checkout
+                            </span>
+                        </motion.div>
                     </ul>
                 )}
             </div>

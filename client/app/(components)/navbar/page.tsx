@@ -13,6 +13,7 @@ const Navbar = () => {
     const [isAccount, setIsAccount] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [userRole, setUserRole] = useState();
     const { cartItems, fetchCart } = useCart();
     const [username, setUsername] = useState('');
     const router = useRouter();
@@ -25,6 +26,7 @@ const Navbar = () => {
                 const res = await axios.get("http://localhost:8080/auth/me"); // Returns user_id, username, and role
                 setUsername(res.data.user.username);
                 setIsLoggedIn(true);
+                setUserRole(res.data.user.role);
             } catch (error) {
                 setIsLoggedIn(false);
                 setUsername('');
@@ -154,22 +156,35 @@ const Navbar = () => {
                     </motion.div>
                 </div>
             </div>
-            <motion.div
-                className='flex fixed flex-col gap-6 left-0 w-40 h-full overflow-hidden items-center bg-opacity-95 bg-white z-10 border-2 border-red-600'
-                initial={{ x: '-100%', opacity: 1 }}
-                animate={isOpen ? { x: 0, opacity: 1 } : { x: '-100%', opacity: 1 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                >
-                <span className='mt-24 font-bold text-lg'>
-                    Admin Tools
-                </span>
-                <Link className='flex left-0' href={'/add_products'}>
-                    Add Products
-                </Link>
-                <Link className='flex left-0' href={'/add_categories'}>
-                    Add Categories
-                </Link>
-            </motion.div>
+            {userRole === 'admin' ? (
+                <motion.div
+                    className='flex fixed flex-col gap-3 left-0 w-40 h-full overflow-hidden items-center bg-white shadow-xl rounded-bl-lg z-10 top-[4.88rem]'
+                    initial={{ x: '-100%', opacity: 1 }}
+                    animate={isOpen ? { x: 0, opacity: 1 } : { x: '-100%', opacity: 1 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                    <span className='font-bold text-lg'>
+                        Admin Tools
+                    </span>
+                    <Link className='flex left-0' href={'/add_products'}>
+                        Add Products
+                    </Link>
+                    <Link className='flex left-0' href={'/add_categories'}>
+                        Add Categories
+                    </Link>
+                </motion.div>
+            ) : (
+                <motion.div
+                    className='flex fixed flex-col gap-6 left-0 w-40 h-full overflow-hidden items-center bg-white shadow-xl rounded-bl-lg z-10 top-[4.88rem]'
+                    initial={{ x: '-100%', opacity: 1 }}
+                    animate={isOpen ? { x: 0, opacity: 1 } : { x: '-100%', opacity: 1 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                    <span className='font-bold text-lg'>
+                        User Stuff
+                    </span>
+                </motion.div>
+            )}
         </div>
      );
 }

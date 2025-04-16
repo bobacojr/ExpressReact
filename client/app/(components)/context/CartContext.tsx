@@ -7,7 +7,7 @@ const CartContext = createContext<CartContextType>({
 });
 
 interface CartContextType {
-    cartItems: Product[];
+    cartItems: CartItem[];
     fetchCart: () => Promise<void>;
 };
 

@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from '../(components)/axiosConfig';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -15,11 +15,35 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
     const [currentCategory, setCurrentCategory] = useState('All'); // Default search filter is All
     const [isProductAdded, setIsProductAdded] = useState(false); // Used for tracking if a product has been added to the users cart
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [quantity, setQuantity] = useState(1);
     
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null); // Used to display the selected product
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const slidingMenuRef = useRef<HTMLDivElement>(null); // Ref for the add-to-cart sliding menu
+
+    /* Product variants */
+    const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null)
+    const [selectedColor, setSelectedColor] = useState<string | null>(null);
+    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
+    const [availableQuantity, setAvailableQuantity] = useState<number>(0);
+
+    /* Colors */
+    const colorMap: Record<string, string> = {
+        "velvet red": "#9c0000",
+        "gray": "#808080",
+        "railroad gray": "#9d9d9d",
+        "xavier blue": "#21304E",
+        "white": "#FFFFFF",
+        "black": "#000000",
+    };
+
+    function getMappedColor(color: string): string {
+        const colorString = color.toLowerCase().trim();
+
+        return colorMap[colorString] || colorString.replace(/\s+/g, '');
+    }
 
     const { fetchCart } = useCart();
 
@@ -43,7 +67,8 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         getUserRole();
     }, []);
 
-    useEffect(() => { // Close the sliding menu when clicking outside
+    /* Handles closing out of the sliding menu */
+    useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (slidingMenuRef.current && !slidingMenuRef.current.contains(event.target as Node)) {
                 onClosePopup(); // Close the sliding menu
@@ -59,6 +84,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         };
     }, [onClosePopup]); 
 
+    /* Fetch products and categories for landing page */
     useEffect(() => {
         console.log("Fetching all products...");
         // Fetch all products
@@ -68,8 +94,14 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                     params: { category_id: currentCategory === "All" ? null : currentCategory },
                     withCredentials: true,
                 });
-                setProducts(res.data);
-                setFilteredProducts(res.data);
+                const productData = res.data;
+                setProducts(productData);
+
+                if (productData.variants && productData.variants.length > 0) { // Default to first variant
+                    setSelectedVariant(productData.variants[0]);
+                }
+
+                setFilteredProducts(productData);
             } catch (error) {
                 console.log(error);
             }
@@ -86,6 +118,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         fetchCategories();
     }, [currentCategory]);
 
+    /* Filtering products */
     useEffect(() => {
         const filtered = products.filter((product) => {
             const category = categories.find((cat) => cat.id === product.category_id);
@@ -99,20 +132,80 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         setFilteredProducts(filtered);
     }, [searchQuery, products, categories]);
 
-    // Add product to cart
-    const addToCart = async (product_id: number) => {
+    /* Add a product/variant to the cart */
+    const addToCart = async () => {
+        if (!selectedProduct) return;
+
         try {
-            const quantity = 1; // Will need to implement choosing a specific quantity
-            await axios.post("http://localhost:8080/cart/add", 
-                { product_id: product_id, quantity: quantity },
-                { withCredentials: true },
-            );
+            const payload = {
+                product_id: selectedProduct.id,
+                variant_id: selectedVariant ? selectedVariant.variant_id : null,
+                variant_image: displayedImage,
+                variant_color: selectedVariant ? selectedVariant.variant_color : null,
+                variant_size: selectedVariant ? selectedVariant.variant_size : null,
+                variant_quantity: availableQuantity,
+                variant_price: displayedPrice,
+                quantity: quantity
+            };
+            await axios.post('http://localhost:8080/cart/add', payload, {
+                withCredentials: true,
+            });
+
             setIsProductAdded(true);
             fetchCart();
         } catch (error) { // Will need to look into these error messages
             console.error("Failed to add to cart:",  error);
         }
     };
+
+    /* Fetch the product's available quantity */
+    const getAvailableQuantity = useCallback(async () => {
+        if (!selectedProduct) return;
+
+        try {
+            const res = await axios.get(`http://localhost:8080/products/${selectedProduct.id}/quantity_check`, {
+                params: {
+                    variant_id: selectedVariant?.variant_id ?? null
+                },
+                withCredentials: true
+            });
+
+            setAvailableQuantity(res.data.available_quantity);
+        } catch (error) {
+            console.error("Failed to fetch available quantity:", error);
+            setAvailableQuantity(0);
+        }
+    }, [selectedProduct, selectedVariant?.variant_id]);
+
+    useEffect(() => {
+        getAvailableQuantity();
+    }, [getAvailableQuantity]);
+
+    /* Set defaults for variants */
+    useEffect(() => {
+        if (selectedProduct && selectedProduct.variants && selectedProduct.variants.length > 0) {
+            const uniqueColors = [... new Set(selectedProduct.variants.map((v) => v.variant_color))];
+            const defaultColor = uniqueColors[0];
+            const defaultSize = "S";
+
+            setSelectedColor(defaultColor ?? null);
+            setSelectedSize(defaultSize);
+
+            const defaultVariant = selectedProduct.variants.find((v) => v.variant_color === defaultColor && v.variant_size?.toLowerCase() === defaultSize);
+            setSelectedVariant(defaultVariant ?? null);
+        }
+    }, [selectedProduct]);
+
+    useEffect(() => {
+        if (!selectedProduct?.variants || selectedProduct.variants.length === 0 || !selectedColor || !selectedSize) return;
+        {
+            const variant = selectedProduct.variants.find((v) => 
+                v.variant_color?.toLowerCase() === selectedColor.toLocaleLowerCase() &&
+                v.variant_size?.toLowerCase() === selectedSize.toLowerCase()
+            );
+            setSelectedVariant(variant || null);
+        }
+    }, [selectedColor, selectedSize, selectedProduct?.variants]);
 
     const handleEditClick = (product_id: number) => {
         console.log("Moving to edit product page");
@@ -121,6 +214,9 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
 
     const handleAddingToCart = async (product: Product) => {
         setSelectedProduct(product);
+        setSelectedVariant(null);
+        setSelectedColor(null);
+        setSelectedSize(null);
         onAddingToCart();
     };
 
@@ -128,6 +224,9 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
         console.log("Moving to show_cart page");
         router.push('/show_cart');
     }
+
+    const displayedImage = selectedVariant && selectedVariant.variant_image ? selectedVariant.variant_image : selectedProduct?.image;
+    const displayedPrice = selectedVariant && selectedVariant.variant_price ? selectedVariant.variant_price : selectedProduct?.price;
 
     return ( 
         <div className="flex w-screen h-screen">
@@ -212,7 +311,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                         animate={{ x: 0 }} 
                         exit={{ x: '100%' }}
                         transition={{ type: 'tween', duration: 0.3 }}
-                    >
+                        >
                         {selectedProduct && (
                             <div className='flex flex-col w-full h-full p-2'>
                                 <div className='flex w-full flex-row items-center justify-between border-b-2 border-gray-300'>
@@ -253,7 +352,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                 <div className='flex flex-row w-full pt-2'>
                                     <div className='w-44 h-44 xs:w-48 xs:h-48 relative flex-shrink-0'>
                                         <Image 
-                                            src={`http://localhost:8080/${selectedProduct.image}`}
+                                            src={`http://localhost:8080/${displayedImage}`}
                                             fill
                                             alt={selectedProduct.title}
                                             sizes='(max-width: 100px)'
@@ -265,17 +364,70 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                         <span className='text-lg font-semibold'>
                                             {selectedProduct.title}
                                         </span>
-                                        <span className='text-sm italic pb-2'>
+                                        <span className='text-sm italic'>
                                             {selectedProduct.brand}
                                         </span>
-                                        <span className='text-md text-gray-500 text-wrap overflow-wrap break-word whitespace-normal w-full max-h-[6em]'>
-                                            {selectedProduct.description}
+                                        <span className=' text-sm italic'>
+                                            {selectedProduct.author}
                                         </span>
                                         <span className='text-red-500 font-semibold'>
-                                            ${selectedProduct.price}
+                                            ${displayedPrice}
                                         </span>
                                     </div>
                                 </div>
+
+                                {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+                                    <div className="mt-4">
+                                        <span className='flex'>
+                                            Color: {selectedColor}
+                                        </span>
+                                        <div className='flex gap-2'>
+                                            {[... new Set(selectedProduct.variants.map((v) => v.variant_color))].sort((a, b) => a!.localeCompare(b!)).map((colorValue) => (
+                                                <button
+                                                    key={colorValue}
+                                                    onClick={() => {
+                                                        setSelectedColor(colorValue!);
+                                                    }}
+                                                        
+                                                    className={`w-10 h-10 rounded ${selectedColor === colorValue ? 'border-2 border-blue-500' : 'border border-gray-400'}`}
+                                                    style={{ backgroundColor: getMappedColor(colorValue!) }}
+                                                    title={`Color: ${colorValue}`}
+                                                    >
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {selectedColor && (
+                                    <div className="mt-4">
+                                        <span className='flex'>
+                                            Size: {selectedSize}
+                                        </span>
+                                        <div className="flex gap-2">
+                                            {[...new Set(selectedProduct.variants!
+                                                .filter((v) => v.variant_color === selectedColor)
+                                                .map((v) => v.variant_size))]
+                                                .sort((a, b) => {
+                                                    const sizeOrder = ['s', 'm', 'l', 'xl', 'xxl'];
+                                                    const aLower = a?.toLowerCase();
+                                                    const bLower = b?.toLowerCase();
+                                                    return sizeOrder.indexOf(aLower!) - sizeOrder.indexOf(bLower!);
+                                                })
+                                                .map((sizeValue) => (
+                                                    <button
+                                                        key={sizeValue}
+                                                        onClick={() => {
+                                                            setSelectedSize(sizeValue!);
+                                                        }}
+
+                                                        className={`w-10 h-10 rounded ${selectedSize === sizeValue ? 'text-blue-500 border border-blue-500' : 'text-gray-600 border border-gray-400'}`}
+                                                        >
+                                                    {sizeValue!.toUpperCase()}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    )}
 
                                 <div className='flex flex-col justify-center items-center mt-6'>
                                     {isProductAdded ? (
@@ -306,14 +458,41 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
                                             </motion.button>
                                         </div>
                                     ) : (
-                                    <motion.button
-                                        className='border-2 w-11/12 p-2 border-gray-300  text-gray-500 rounded-2xl font-semibold'
-                                        onClick={() => addToCart(selectedProduct.id)}
-                                        whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e"  }}
-                                        whileTap={{ scale: 0.9 }}
-                                        >
-                                        Add to Cart
-                                    </motion.button>
+                                        availableQuantity > 0 ? (
+                                            <div className='flex flex-col w-full  sm:justify-normal gap-6'>
+                                                <div className='flex flex-row items-center gap-1'>
+                                                    <select
+                                                        className='border-2 border-gray-300 p-2 rounded-2xl'
+                                                        value={quantity}
+                                                        onChange={(e) => setQuantity(Number(e.target.value))}
+                                                        >
+                                                        {[...Array(Math.max(Number(availableQuantity), 0)).keys()].map((num) => (
+                                                            <option key={num + 1} value={num + 1}>
+                                                                Quantity: {num + 1}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className='flex flex-row text-orange-500 font-semibold'>
+                                                        <p>Only {availableQuantity} left!</p>
+                                                    </div>
+                                                </div>
+                                                <div className='flex justify-center'>
+                                                    <motion.button
+                                                        className='border-2 w-11/12 p-2 border-gray-300  text-gray-500 rounded-2xl font-semibold items-center'
+                                                        onClick={() => addToCart()}
+                                                        whileHover={{ scale: 1.06, borderColor: "#22c55e", color: "#22c55e"  }}
+                                                        whileTap={{ scale: 0.9 }}
+                                                        >
+                                                        Add to Cart
+                                                    </motion.button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                Out of stock, please check back later
+                                            </div>
+                                        )
+                                    
                                     )}
                                 </div>
                             </div>

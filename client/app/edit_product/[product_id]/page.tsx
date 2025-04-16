@@ -17,20 +17,8 @@ const EditProduct = () => {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [product, setProduct] = useState({
-        title: "",
-        description: "",
-        image: null as File | null,
-        price: "" as string | number,
-        existingImage: "",
-        category_id: null as number | null,
-        size: "",
-        color: "",
-        author: "",
-        brand: "",
-        model: "",
-        quantity: ""
-    });
+    const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+    const [product, setProduct] = useState<Product | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
@@ -42,21 +30,11 @@ const EditProduct = () => {
                 const res = await axios.get(`http://localhost:8080/products/${product_id}`, {
                     withCredentials: true,
                 });
-                const productData = res.data.data[0];
-                setProduct({
-                    title: productData.title,
-                    description: productData.description,
-                    price: productData.price,
-                    image: null,
-                    existingImage: productData.image,
-                    category_id: productData.category_id,
-                    size: productData.size,
-                    color: productData.color,
-                    author: productData.author,
-                    brand: productData.brand,
-                    model: productData.model,
-                    quantity: productData.quantity
-                });
+                const productData = res.data.data;
+                setProduct(productData);
+                if (productData.variants && productData.variants.length > 0) { // Default to first variant
+                    setSelectedVariant(productData.variants[0])
+                }
                 setIsLoading(false);
             } catch (error) {
                 setIsLoading(false);
@@ -99,20 +77,22 @@ const EditProduct = () => {
     }
 
     const handleSubmit = async () => {
+        if (!product) return;
+
         const formData = new FormData();
         formData.append("title", product.title);
         formData.append("description", product.description);
         formData.append("price", String(product.price));
         formData.append("category_id", String(product.category_id));
-        formData.append("size", product.size || "");
-        formData.append("color", product.color || "");
         formData.append("author", product.author || "");
         formData.append("brand", product.brand || "");
         formData.append("model", product.model || "");
         formData.append("quantity", product.quantity || "");
+
         if (product.image) {
             formData.append("image", product.image);
         }
+
         try {
             const res = await axios.put(`http://localhost:8080/products/${product_id}`, formData, {
                 withCredentials: true,
@@ -153,6 +133,8 @@ const EditProduct = () => {
         const category = categories.find((cat) => cat.id === category_id);
         return category ? category.name : null;
     };
+
+    const displayedImage = selectedVariant && selectedVariant.variant_image ? selectedVariant.variant_image : product?.image;
 
     const DeleteModal = () => {
         return (
@@ -227,12 +209,12 @@ const EditProduct = () => {
                         name="image"
                         onChange={handleFileChange}
                         />
-                    {product.existingImage && (
+                    {displayedImage && (
                         <div className='flex flex-col justify-center items-center'>
                             <p className='font-semibold'>Current Image:</p>
                             <Image
-                                src={`http://localhost:8080/${product.existingImage}`}
-                                alt={product.title}
+                                src={`http://localhost:8080/${displayedImage}`}
+                                alt={product!.title}
                                 width={280}
                                 height={170}
                                 className='rounded-lg p-1'
@@ -248,7 +230,7 @@ const EditProduct = () => {
                             type="text"
                             name="title"
                             placeholder="Product Title"
-                            value={product.title}
+                            value={product!.title}
                             onChange={handleInputChange}
                         />
                     </div>
@@ -259,7 +241,7 @@ const EditProduct = () => {
                             type="text"
                             name="description"
                             placeholder="Product Description"
-                            value={product.description}
+                            value={product!.description}
                             onChange={handleInputChange}
                             />
                     </div>
@@ -269,7 +251,7 @@ const EditProduct = () => {
                             className='border-2 border-gray-300 rounded-md pl-1 w-full'
                             type="text"
                             name="price"
-                            value={Number(product.price) || ""}
+                            value={Number(product!.price) || ""}
                             placeholder={'0.00'}
                             onChange={handleInputChange}
                             />
@@ -279,7 +261,7 @@ const EditProduct = () => {
                         <select
                             className='border-2 border-gray-300 rounded-md pl-1 w-full'
                             name='category_id'
-                            value={product.category_id || ""}
+                            value={product!.category_id || ""}
                             onChange={handleInputChange}
                             required
                             >
@@ -298,11 +280,11 @@ const EditProduct = () => {
                             type="text"
                             name="quantity"
                             onChange={handleInputChange}
-                            value={product.quantity || ""}
+                            value={product!.quantity || ""}
                             required
                             />
                     </div>
-                    {getCategoryName(product.category_id) === "Clothes" && (
+                    {getCategoryName(product!.category_id) === "Clothes" && (
                         <>
                         <div className='flex flex-row'>
                             <h1 className='font-semibold pr-1'>Brand:</h1>
@@ -311,7 +293,7 @@ const EditProduct = () => {
                                 type="text"
                                 name="brand"
                                 onChange={handleInputChange}
-                                value={product.brand || ""}
+                                value={product!.brand || ""}
                                 required
                                 />
                         </div>
@@ -322,7 +304,7 @@ const EditProduct = () => {
                                 type="text"
                                 name="size"
                                 onChange={handleInputChange}
-                                value={product.size || ""}
+                                value={product!.size || ""}
                                 required
                                 />
                         </div>
@@ -333,13 +315,13 @@ const EditProduct = () => {
                                 type="text"
                                 name="color"
                                 onChange={handleInputChange}
-                                value={product.color || ""}
+                                value={product!.color || ""}
                                 required
                                 />
                         </div>
                         </>
                     )}
-                    {getCategoryName(product.category_id) === "Books" && (
+                    {getCategoryName(product!.category_id) === "Books" && (
                         <>
                         <div className='flex flex-row'>
                             <h1 className='font-semibold pr-1'>Author:</h1>
@@ -348,13 +330,13 @@ const EditProduct = () => {
                                 type="text"
                                 name="author"
                                 onChange={handleInputChange}
-                                value={product.author || ""}
+                                value={product!.author || ""}
                                 required
                                 />
                         </div>                          
                         </>
                     )}
-                    {getCategoryName(product.category_id) === "Electronics" && (
+                    {getCategoryName(product!.category_id) === "Electronics" && (
                         <>
                         <div className='flex flex-row'>
                             <h1 className='font-semibold pr-1'>Brand:</h1>
@@ -363,7 +345,7 @@ const EditProduct = () => {
                                 type="text"
                                 name="brand"
                                 onChange={handleInputChange}
-                                value={product.brand || ""}
+                                value={product!.brand || ""}
                                 required
                                 />
                         </div>
@@ -374,13 +356,13 @@ const EditProduct = () => {
                                 type="text"
                                 name="model"
                                 onChange={handleInputChange}
-                                value={product.model || ""}
+                                value={product!.model || ""}
                                 required
                                 />
                         </div>                                                       
                         </>
                     )}
-                    {getCategoryName(product.category_id) === "Toys" && (
+                    {getCategoryName(product!.category_id) === "Toys" && (
                         <>
                         <div className='flex flex-row'>
                             <h1 className='font-semibold pr-1'>Brand:</h1>
@@ -389,13 +371,13 @@ const EditProduct = () => {
                                 type="text"
                                 name="brand"
                                 onChange={handleInputChange}
-                                value={product.brand || ""}
+                                value={product!.brand || ""}
                                 required
                                 />
                         </div>
                         </>
                     )}
-                    {getCategoryName(product.category_id) === "Games" && (
+                    {getCategoryName(product!.category_id) === "Games" && (
                         <>
                         <div className='flex flex-row'>
                             <h1 className='font-semibold pr-1'>Brand:</h1>
@@ -404,7 +386,7 @@ const EditProduct = () => {
                                 type="text"
                                 name="brand"
                                 onChange={handleInputChange}
-                                value={product.brand || ""}
+                                value={product!.brand || ""}
                                 required
                                 />
                         </div>

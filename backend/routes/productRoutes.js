@@ -34,37 +34,193 @@ router.get("/", async (req, res) => {
     const { category_id } = req.query;
     //const user_id = req.user.id;
     let q = `
-        SELECT products.*, categories.name AS category_name
-        FROM products 
-        LEFT JOIN categories ON products.category_id = categories.id`;
+        SELECT products.*, 
+            categories.name AS category_name,
+            variants.variant_id,
+            variants.variant_size,
+            variants.variant_color,
+            variants.variant_quantity,
+            variants.variant_price,
+            variants.variant_image
+        FROM products
+        LEFT JOIN categories ON products.category_id = categories.id
+        LEFT JOIN product_variants AS variants ON products.id = variants.product_id`;
 
+    const values = [];
     if (category_id) {
         q += " WHERE products.category_id = ?";
+        values.push(category_id);
     }
 
-    db.query(q, [category_id], (error, data) => { // Run the query we created (q) and return either err or data
+    db.query(q, values, (error, data) => {
         if (error) {
-            return  res.status(500).json("An error occurred while fetching products", error); // Error
+            return res.status(500).json({
+                message: "An error occurred while fetching all products",
+                error: error.message
+            });
         }
-        return res.status(200).json(data); // Successful query operation
+        const productsMap = [];
+        data.forEach(row => { // Add each product to the map
+            if (!productsMap[row.id]) {
+                productsMap[row.id] = {
+                    id: row.id,
+                    title: row.title,
+                    description: row.description,
+                    image: row.image,
+                    price: row.price,
+                    author: row.author,
+                    brand: row.brand,
+                    model: row.model,
+                    quantity: row.quantity,
+                    category_id: row.category_id,
+                    category_name: row.category_name,
+                    variants: []
+                };
+            }
+            if (row.variant_id) { // If variants are found add those to the product's variants array
+                productsMap[row.id].variants.push({
+                    variant_id: row.variant_id,
+                    variant_size: row.variant_size,
+                    variant_color: row.variant_color,
+                    variant_quantity: row.variant_quantity,
+                    variant_price: row.variant_price,
+                    variant_image: row.variant_image
+                });
+            }
+        });
+        return res.status(200).json(Object.values(productsMap)); // Return the products map
+    });
+});
+
+router.get("/:id", async (req, res) => {
+    const product_id = req.params.id;
+    let q = `
+        SELECT
+            products.id,
+            products.title,
+            products.description,
+            products.image,
+            products.price,
+            products.author,
+            products.brand,
+            products.model,
+            products.quantity AS product_quantity,
+            categories.name AS category_name,
+            variants.variant_id,
+            variants.variant_size,
+            variants.variant_color,
+            variants.variant_type,
+            variants.variant_quantity,
+            variants.variant_price,
+            variants.variant_image
+        FROM products 
+        LEFT JOIN categories ON products.category_id = categories.id
+        LEFT JOIN product_variants AS variants ON products.id = variants.product_id
+        WHERE products.id = ?`;
+
+    db.query(q, [product_id], (error, data) => {
+        if (error) {
+            return res.status(500).json({
+                message: "An error occurrred while finding a product:",
+                error: error.message
+            });
+        }
+        if (data.length === 0) {
+            return res.status(404).json({
+                message: "Product not found"
+            });
+        }
+        const product = {
+            id: data[0].id,
+            title: data[0].title,
+            description: data[0].description,
+            image: data[0].image,
+            price: data[0].price,
+            author: data[0].author,
+            brand: data[0].brand,
+            category_id: data[0].category_id,
+            category_name: data[0].category_name,
+            quantity: data[0].product_quantity,
+            variants: []
+        };
+        data.forEach(row => {
+            if (row.variant_id) {
+                product.variants.push({
+                    variant_id: row.variant_id,
+                    variant_size: row.variant_size,
+                    variant_color: row.variant_color,
+                    variant_type: row.product_type,
+                    variant_quantity: row.variant_quantity,
+                    variant_price: row.variant_price,
+                    variant_image: row.variant_image,
+                });
+            }
+        });
+        return res.status(200).json({
+            message: "Product found",
+            data: product
+        });
+    });
+});
+
+router.get("/:id/quantity_check", async (req, res) => {
+    console.log("✔️ quantity_check route hit", req.params.id, req.query.variant_id);
+    const product_id = req.params.id;
+    const variant_id = req.query.variant_id;
+
+    const q = variant_id 
+        ? `
+        SELECT
+            v.variant_quantity,
+            IFNULL(SUM(c.quantity), 0) AS quantity_in_cart,
+            (v.variant_quantity - IFNULL(SUM(c.quantity), 0)) AS available_quantity
+        FROM product_variants v
+        LEFT JOIN cart c ON v.variant_id = c.variant_id
+        WHERE v.variant_id = ?
+        GROUP BY v.variant_id;
+        `
+        : 
+        `SELECT
+            p.quantity,
+            IFNULL(SUM(c.quantity), 0) AS quantity_in_cart,
+            (p.quantity - IFNULL(SUM(c.quantity), 0)) as available_quantity
+        FROM products p
+        LEFT JOIN cart c ON p.id = c.product_id AND c.variant_id IS NULL
+        WHERE p.id = ?
+        GROUP BY p.id;
+        `;
+    db.query(q, [variant_id || product_id], (error, data) => {
+        if (error) {
+            return res.status(500).json({
+                message: "An error occurred while attempting to check a products quantity",
+                error: error.message
+            });
+        }
+        if (data.length === 0) {
+            return res.status(404).json({
+                message: "Product or variant not found"
+            });
+        }
+        return res.status(200).json({
+            message: "Quantity check successful",
+            available_quantity: data[0].available_quantity
+        });
     });
 });
 
 // Create new product (admin only)
 router.post("/", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
-    const { title, description, price, category_id, size, color, author, brand, model, quantity} = req.body;
+    const { title, description, price, category_id, author, brand, model, quantity} = req.body;
     const user_id = req.session.userID;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
 
-    const q = "INSERT INTO products (`title`, `description`, `price`, `image`, `category_id`, `size`, `color`, `author`, `brand`, `model`, `quantity`, `user_id`) VALUES (?)";
+    const q = "INSERT INTO products (`title`, `description`, `price`, `image`, `category_id`, `author`, `brand`, `model`, `quantity`, `user_id`) VALUES (?)";
     const values = [
         title, 
         description,
         price,
         imagePath,
         category_id,
-        size,
-        color,
         author,
         brand,
         model,
@@ -86,44 +242,14 @@ router.post("/", verifySession, checkRole(['admin']), upload.single('image'), as
     });
 });
 
-// Get product by id (all roles)
-router.get("/:id", async (req, res) => {
-    const product_id = req.params.id;
-    const q = `
-        SELECT products.*, categories.name AS category_name
-        FROM products
-        LEFT JOIN categories ON products.category_id = categories.id
-        WHERE products.id = ?`;
-
-    db.query(q, [product_id], (error, data) => {
-        if (error) {
-            return res.status(500).json({
-                message: "An error occurred while attemping to find a product",
-                error: error.message
-            }); // Error
-        }
-        if (data.length === 0) {
-            return res.status(404).json({
-                message: "Product not found or unauthorized request"
-            });
-        }
-        return res.status(200).json({
-            message: "Product found",
-            data: data
-        }); // Successful query operation
-    });
-});
 
 // Update existing product by id (admin only)
 router.put("/:id", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
-    console.log("Request Body:", req.body);
-    console.log("Request File:", req.file);
     const product_id = req.params.id;
     const user_id = req.session.userID;
-    const { title, description, price, category_id, size, color, author, brand, model, quantity } = req.body;
+    const { title, description, price, category_id, author, brand, model, quantity } = req.body;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
-    console.log("Request Body:", req.body);
-    console.log("Request File:", req.file);
+
     let q = "UPDATE products SET ";
 
     const values = []; // Stores the values for each update
@@ -148,14 +274,6 @@ router.put("/:id", verifySession, checkRole(['admin']), upload.single('image'), 
     if (category_id) { // Update category_id
         updates.push("category_id = ?");
         values.push(category_id);
-    }
-    if (size) { // Update size
-        updates.push("size = ?");
-        values.push(size);
-    }
-    if (color) { // Update color
-        updates.push("color = ?");
-        values.push(color);
     }
     if (author) { // Update author
         updates.push("author = ?");
