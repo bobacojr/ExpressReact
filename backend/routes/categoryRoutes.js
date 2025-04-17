@@ -38,13 +38,14 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", verifySession, checkRole(['admin']), async (req, res) => {
-    const { name, parent_id } = req.body;
+    const { name, parent_id, default_metadata } = req.body;
     const user_id = req.session.userID;
-    const q = "INSERT INTO categories (`name`, `user_id`, `parent_id`) VALUES (?)";
+    const q = "INSERT INTO categories (`name`, `user_id`, `parent_id`, `default_metadata`) VALUES (?)";
     const values = [
         name,
         user_id,
         parent_id,
+        default_metadata
     ]
 
     db.query(q, [values], (error, data) => {

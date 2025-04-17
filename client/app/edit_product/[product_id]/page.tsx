@@ -6,11 +6,6 @@ import Image from 'next/image';
 import Navbar from '@/app/(components)/navbar/page';
 import withAuth from '@/app/(components)/ProtectedRoute';
 
-interface Category {
-    id: number;
-    name: string;
-}
-
 const EditProduct = () => {
     const params = useParams();
     const { product_id } = params;

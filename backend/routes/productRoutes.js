@@ -41,7 +41,8 @@ router.get("/", async (req, res) => {
             variants.variant_color,
             variants.variant_quantity,
             variants.variant_price,
-            variants.variant_image
+            variants.variant_image,
+            variants.variant_metadata
         FROM products
         LEFT JOIN categories ON products.category_id = categories.id
         LEFT JOIN product_variants AS variants ON products.id = variants.product_id`;
@@ -72,6 +73,7 @@ router.get("/", async (req, res) => {
                     brand: row.brand,
                     model: row.model,
                     quantity: row.quantity,
+                    metadata: row.metadata,
                     category_id: row.category_id,
                     category_name: row.category_name,
                     variants: []
@@ -84,7 +86,8 @@ router.get("/", async (req, res) => {
                     variant_color: row.variant_color,
                     variant_quantity: row.variant_quantity,
                     variant_price: row.variant_price,
-                    variant_image: row.variant_image
+                    variant_image: row.variant_image,
+                    variant_metadata: row.variant_metadata
                 });
             }
         });
@@ -104,6 +107,7 @@ router.get("/:id", async (req, res) => {
             products.author,
             products.brand,
             products.model,
+            products.metadata,
             products.quantity AS product_quantity,
             categories.name AS category_name,
             variants.variant_id,
@@ -112,7 +116,8 @@ router.get("/:id", async (req, res) => {
             variants.variant_type,
             variants.variant_quantity,
             variants.variant_price,
-            variants.variant_image
+            variants.variant_image,
+            variants.variant_metadata
         FROM products 
         LEFT JOIN categories ON products.category_id = categories.id
         LEFT JOIN product_variants AS variants ON products.id = variants.product_id
@@ -138,6 +143,8 @@ router.get("/:id", async (req, res) => {
             price: data[0].price,
             author: data[0].author,
             brand: data[0].brand,
+            model: data[0].model,
+            metadata: data[0].metadata,
             category_id: data[0].category_id,
             category_name: data[0].category_name,
             quantity: data[0].product_quantity,
@@ -153,6 +160,7 @@ router.get("/:id", async (req, res) => {
                     variant_quantity: row.variant_quantity,
                     variant_price: row.variant_price,
                     variant_image: row.variant_image,
+                    variant_metadata: row.variant_metadata
                 });
             }
         });
@@ -210,11 +218,11 @@ router.get("/:id/quantity_check", async (req, res) => {
 
 // Create new product (admin only)
 router.post("/", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {
-    const { title, description, price, category_id, author, brand, model, quantity} = req.body;
+    const { title, description, price, category_id, author, brand, model, quantity, metadata} = req.body;
     const user_id = req.session.userID;
     const imagePath = req.file ? `uploads/${req.file.filename}` : null;
 
-    const q = "INSERT INTO products (`title`, `description`, `price`, `image`, `category_id`, `author`, `brand`, `model`, `quantity`, `user_id`) VALUES (?)";
+    const q = "INSERT INTO products (`title`, `description`, `price`, `image`, `category_id`, `author`, `brand`, `model`, `quantity`, `user_id`, `metadata`) VALUES (?)";
     const values = [
         title, 
         description,
@@ -226,6 +234,7 @@ router.post("/", verifySession, checkRole(['admin']), upload.single('image'), as
         model,
         quantity,
         user_id,
+        metadata
     ];
 
     db.query(q, [values], (error, data) => {
@@ -242,6 +251,42 @@ router.post("/", verifySession, checkRole(['admin']), upload.single('image'), as
     });
 });
 
+router.post("/:id/variants", verifySession, checkRole(['admin']), upload.single('variant_image'), async (req, res) => {
+    const product_id = req.params.id;
+    const user_id = req.session.userID;
+    const { variant_size, variant_color, variant_type, variant_quantity, variant_price, variant_metadata } = req.body;
+
+    const imagePath = req.file ? `uploads/${req.file.filename}` : null;
+
+    const q = `
+        INSERT INTO product_variants
+        (product_id, variant_size, variant_color, variant_type, variant_quantity, variant_price, variant_image, variant_metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+        product_id,
+        variant_size,
+        variant_color,
+        variant_type,
+        variant_quantity,
+        variant_price,
+        imagePath,
+        variant_metadata
+    ];
+
+    db.query(q, values, (error, data) => {
+        if (error) {
+            return res.status(500).json({
+                message: "An error occurred creating a variant",
+                error: error.message
+            });
+        }
+        return res.status(200).json({
+            message: "Variant has been created",
+            data: data
+        });
+    });
+});
 
 // Update existing product by id (admin only)
 router.put("/:id", verifySession, checkRole(['admin']), upload.single('image'), async (req, res) => {

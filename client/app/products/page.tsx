@@ -422,7 +422,7 @@ const Products = ({ addingToCart, onAddingToCart, onClosePopup }: ProductsProps)
 
                                                         className={`w-10 h-10 rounded ${selectedSize === sizeValue ? 'text-blue-500 border border-blue-500' : 'text-gray-600 border border-gray-400'}`}
                                                         >
-                                                    {sizeValue!.toUpperCase()}
+                                                    {(sizeValue || "N/A").toUpperCase()}
                                                 </button>
                                             ))}
                                         </div>

@@ -24,6 +24,8 @@ const ShowProduct = () => {
 
     const { fetchCart } = useCart();
 
+    const [metadata, setMetadata] = useState<{ [key: string]: string }>({});
+
     /* Product variants */
     const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null)
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -42,6 +44,7 @@ const ShowProduct = () => {
     };
 
     function getMappedColor(color: string): string {
+        if (!color) return "";
         const colorString = color.toLowerCase().trim();
 
         return colorMap[colorString] || colorString.replace(/\s+/g, '');
@@ -69,6 +72,8 @@ const ShowProduct = () => {
                 });
                 const productData = res.data.data;
                 setProduct(productData);
+
+
 
                 if (productData.variants && productData.variants.length > 0) { // Default to first variant
                     setSelectedVariant(productData.variants[0]);
@@ -110,15 +115,61 @@ const ShowProduct = () => {
     }, [product]);
 
     useEffect(() => {
-        if (!product?.variants || product.variants.length === 0 || !selectedColor || !selectedSize) return;
-        {
-            const variant = product.variants.find((v) => 
-                v.variant_color?.toLowerCase() === selectedColor.toLocaleLowerCase() &&
-                v.variant_size?.toLowerCase() === selectedSize.toLowerCase()
+        if (!product?.variants || product.variants.length === 0 || !selectedColor) return;
+    
+        let variant: Variant | undefined;
+    
+        if (selectedSize) {
+            // Try to find a variant with both color and size
+            variant = product.variants.find(
+                (v) =>
+                    v.variant_color?.toLowerCase() === selectedColor.toLowerCase() &&
+                    v.variant_size?.toLowerCase() === selectedSize.toLowerCase()
             );
-            setSelectedVariant(variant || null);
         }
-    }, [selectedColor, selectedSize, product?.variants]);
+    
+        if (!variant) {
+            // Fallback to color only (for controllers, etc.)
+            variant = product.variants.find(
+                (v) => v.variant_color?.toLowerCase() === selectedColor.toLowerCase()
+            );
+        }
+    
+        setSelectedVariant(variant || null);
+    }, [selectedColor, selectedSize, product?.variants]);    
+
+    const normalizeMetadataKeys = (data: Record<string, string>) => {
+        return Object.fromEntries(
+            Object.entries(data).map(([key, value]) => [key.toLowerCase(), value])
+        );
+    };      
+
+    useEffect(() => {
+        // Fallback order:
+        // 1. If variant metadata exists, use it
+        // 2. Else if product metadata exists, use that
+        // 3. Else, empty object
+        try {
+            if (selectedVariant?.variant_metadata) {
+                const raw = typeof selectedVariant.variant_metadata === "string"
+                    ? JSON.parse(selectedVariant.variant_metadata || "{}")
+                    : selectedVariant.variant_metadata;
+            
+                setMetadata(normalizeMetadataKeys(raw));
+                } else if (product?.metadata) {
+                    const raw = typeof product.metadata === "string"
+                        ? JSON.parse(product.metadata || "{}")
+                        : product.metadata;
+            
+                    setMetadata(normalizeMetadataKeys(raw));
+                } else {
+                    setMetadata({});
+                }
+            } catch (error) {
+                console.warn("Failed to parse metadata:", error);
+                setMetadata({});
+            }
+        }, [selectedVariant, product]);      
 
     const handleAddToCart = async () => {
         if (!product) return;
@@ -220,7 +271,7 @@ const ShowProduct = () => {
                         </div>
                     )}
                 <div className='flex flex-col w-full h-auto sm:w-3/4 max-w-[76em] md:flex-row rounded-lg p-4 gap-1 border-2 border-gray-500'>
-                    {product.image && (
+                    {displayedImage && (
                         <div className='flex flex-col w-full justify-center items-center'>
                             <Image
                                 src={`http://localhost:8080/${displayedImage}`}
@@ -286,7 +337,7 @@ const ShowProduct = () => {
 
                                                 className={`w-10 h-10 rounded ${selectedSize === sizeValue ? 'text-blue-500 border border-blue-500' : 'text-gray-600 border border-gray-400'}`}
                                                 >
-                                            {sizeValue!.toUpperCase()}
+                                            {(sizeValue || "").toUpperCase()}
                                         </button>
                                     ))}
                                 </div>

@@ -1,11 +1,22 @@
 
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from '../(components)/axiosConfig';
 import { useRouter } from 'next/navigation';
 import Navbar from '../(components)/navbar/page';
 import withAuth from '../(components)/ProtectedRoute';
 import { motion } from 'motion/react';
+import Image from 'next/image';
+import { create } from 'domain';
+
+const flattenCategories = (categoryList: Category[], depth = 0): Category[] => {
+    return categoryList.flatMap(category => {
+        const subList = category.subcategories
+            ? flattenCategories(category.subcategories, depth + 1) : [];
+
+            return [{ ...category, depth }, ...subList];
+    });
+};
 
 const AddProduct = () => {
     const router = useRouter();
@@ -13,7 +24,16 @@ const AddProduct = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [isVisibleProducts, setIsVisibleProducts] = useState({});
     const [isVisibleVariants, setIsVisibleVariants] = useState({});
-    const [product, setProduct] = useState<Product>({});
+
+    type ProductForm = Partial<Product>;
+    const [product, setProduct] = useState<ProductForm>({});
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    const [metadata, setMetadata] = useState();
+    const [metadataValues, setMetadataValues] = useState<{ [key: string]: string }>({});
+    const [createMode, setCreateMode] = useState<"product" | "variant">("product");
+
+    const allCategoriesFlat = useMemo(() => flattenCategories(categories), [categories]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -53,12 +73,18 @@ const AddProduct = () => {
     */
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setProduct((prev) => ({
-                ...prev,
-                image: e.target.files![0],
-            }));
-        }
+        const file = e.target.files?.[0];
+        if (!file) return;
+    
+        const imageUrl = URL.createObjectURL(file);
+        setPreviewImage(imageUrl);
+    
+        setProduct((prev) => ({
+            ...prev,
+            ...(createMode === "product"
+                ? { image: file }
+                : { variant_image: file })
+        }));
     };
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -71,61 +97,79 @@ const AddProduct = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
+    
         const formData = new FormData();
-        if (product.title) formData.append("title", product.title);
-        if (product.description) formData.append("description", product.description);
-        if (product.price) formData.append("price", String(product.price)); // Stringify the price
-        if (product.category_id) formData.append("category_id", String(product.category_id));
-        if (product.size) formData.append("size", product.size); // Default to empty string if undefined
-        if (product.color) formData.append("color", product.color);
-        if (product.author) formData.append("author", product.author);
-        if (product.brand) formData.append("brand", product.brand);
-        if (product.model) formData.append("model", product.model);
-        if (product.quantity) formData.append("quantity", String(product.quantity));
+    
+        if (createMode === "product") {
 
-        if (product.image) {
-            formData.append("image", product.image);
-        }
+            //if (metadataValues["author"]) product.author = metadataValues["author"];
+            //if (metadataValues["brand"]) product.brand = metadataValues["brand"];
+            //if (metadataValues["model"]) product.model = metadataValues["model"];
 
-        try {
-            const res = await axios.post("http://localhost:8080/products", formData, {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-            
-            if (res.status === 200) {
-                setProduct({
-                    title: "",
-                    description: "",
-                    price: 0.00,
-                    image: "",
-                    category_id: 0,
-                    size: "",
-                    color: "",
-                    author: "",
-                    brand: "",
-                    model: "",
-                    quantity: 0,
+            if (product.title) formData.append("title", product.title);
+            if (product.description) formData.append("description", product.description);
+            if (product.price) formData.append("price", String(product.price));
+            if (product.category_id) formData.append("category_id", String(product.category_id));
+            if (product.author) formData.append("author", product.author);
+            if (product.brand) formData.append("brand", product.brand);
+            if (product.model) formData.append("model", product.model);
+            if (product.quantity) formData.append("quantity", String(product.quantity));
+            if (product.image) formData.append("image", product.image);
+            if (Object.keys(metadataValues).length > 0) {
+                formData.append("metadata", JSON.stringify(metadataValues));
+            }
+    
+            try {
+                console.log("Product before submit", product)
+                const res = await axios.post("http://localhost:8080/products", formData, {
+                    withCredentials: true,
+                    headers: { "Content-Type": "multipart/form-data" },
                 });
-                console.log("moving to home page");
-                router.push('/');
+    
+                if (res.status === 200) {
+                    setProduct({
+                        title: "",
+                        description: "",
+                        price: 0.00,
+                        image: "",
+                        category_id: 0,
+                        quantity: 0,
+                    });
+                    setMetadataValues({});
+                }
+            } catch (error) {
+                console.error("Error submitting product:", error);
             }
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                console.error("Failed to add product:", error.response?.data);
-            } else {
-                console.error("Error submitting form:", error);
+    
+        } else {
+
+            if (product.product_id) formData.append("product_id", product.product_id);
+            if (product.variant_price) formData.append("variant_price", String(product.variant_price));
+            if (product.variant_quantity) formData.append("variant_quantity", String(product.variant_quantity));
+            if (product.variant_size) formData.append("variant_size", product.variant_size);
+            if (product.variant_color) formData.append("variant_color", product.variant_color);
+            if (product.variant_type) formData.append("variant_type", product.variant_type);
+            if (product.variant_image) formData.append("variant_image", product.variant_image);
+
+            if (Object.keys(metadataValues).length > 0) {
+                formData.append("variant_metadata", JSON.stringify(metadataValues));
+            }
+    
+            try {
+                console.log("Variant before submit", product)
+                const res = await axios.post(`http://localhost:8080/products/${product.product_id}/variants`, formData, {
+                    withCredentials: true,
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+    
+                if (res.status === 200) {
+                    setProduct({});
+                    setMetadataValues({});
+                }
+            } catch (error) {
+                console.error("Error submitting variant:", error);
             }
         }
-    };
-
-    // Helper function to get category name based on id
-    const getCategoryName = (category_id: number | null) => {
-        const category = allCategoriesFlat.find((cat) => cat.id === category_id);
-        return category ? category.name : null;
     };
 
     const handleSetCategory = async (categoryId: number) => {
@@ -152,6 +196,40 @@ const AddProduct = () => {
             [productId]: !prev[productId]
         }));
     };
+
+    const toggleCreateMode = async () => {
+        setCreateMode((prev) => (
+            prev === 'product' ? 'variant' : 'product'
+        ));
+    };
+
+    const getParsedMetadata = (metadata) => {
+        if (!metadata) return;
+        if (typeof metadata === 'string') {
+            try {
+                return JSON.parse(metadata);
+            } catch (error) {
+                console.error("Error while parrsing metadata:", error);
+                return {};
+            }
+        }
+        return metadata;
+    };
+
+    useEffect(() => {
+        setPreviewImage(null);
+    }, [createMode]);    
+
+    useEffect(() => {
+        if (product.category_id) {
+            const selectedCategory = allCategoriesFlat.find(category => category.id === product.category_id);
+            if (selectedCategory && selectedCategory.default_metadata) {
+                setMetadata(getParsedMetadata(selectedCategory.default_metadata));
+            } else {
+                setMetadata({});
+            }
+        }
+    }, [product.category_id, allCategoriesFlat])
 
     const RenderCategory = ({ category, onSelectCategory }: { category: Category; onSelectCategory: (categoryId: number) => void }) => {
         const categoryProducts = products.filter((product) => product.category_id === category.id);
@@ -204,21 +282,50 @@ const AddProduct = () => {
                                 </svg>
                             </div>
                         )}
+                        <motion.span
+                            className='inline-flex w-[20px] h-[30px] cursor-pointer'
+                            whileHover={{ scale: 1.1, color: "#800080" }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                                setCreateMode("variant");
+                              
+                                setProduct(prev => {
+                                  const newProduct = {
+                                    ...prev,
+                                    product_id: product.id,
+                                    category_id: product.category_id,
+                                    variant_size: "",
+                                    variant_color: "",
+                                    variant_type: "",
+                                    variant_quantity: 0,
+                                    variant_price: product.price,
+                                    variant_image: product.image
+                                  };
+                              
+                                  console.log("Set product for variant creation:", newProduct); // 👈 LOG THIS
+                              
+                                  return newProduct;
+                                });
+                              }}
+                            >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="30px" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14.5 3 12 7.156 9.857 3H2l10 18L22 3h-7.5ZM4.486 4.5h2.4L12 13.8l5.107-9.3h2.4L12 18.021 4.486 4.5Z"/>
+                            </svg>
+                        </motion.span>
                         <span onClick={() => toggleVariants(product.id)} className='cursor-pointer'>
                             {product.title}
-                            <div className='flex'>
-                                {product.variants && product.variants.length > 0 && (
-                                    <motion.div className={isVisibleVariants[product.id] ? 'flex flex-col ml-4' : 'hidden'}>
-                                        {product.variants.map((variant) => (
-                                            <div key={variant.variant_id} className='italic'>
-                                                {product.title} - {variant.variant_color} - {variant.variant_size}
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </div>
                         </span>
-                        
+                        <div className='flex'>
+                            {product.variants && product.variants.length > 0 && (
+                                <motion.div className={isVisibleVariants[product.id] ? 'flex flex-col ml-4' : 'hidden'}>
+                                    {product.variants.map((variant) => (
+                                        <div key={variant.variant_id} className='italic'>
+                                            {product.title} - {variant.variant_color} - {variant.variant_size}
+                                        </div>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </div>
                     </div>
                 ))}
                 <div>
@@ -234,69 +341,76 @@ const AddProduct = () => {
         )
     }
 
-    const flattenCategories = (categoryList: Category[], depth = 0): Category[] => {
-        return categoryList.flatMap(category => {
-            const subList = category.subcategories
-                ? flattenCategories(category.subcategories, depth + 1) : [];
-
-                return [{ ...category, depth }, ...subList];
-        });
-    };
-
-    const allCategoriesFlat = flattenCategories(categories);
-
     return ( 
         <div className="flex w-full h-full justify-center">
             <div className="fixed top-0 left-0 w-full z-20">
                 <Navbar />
             </div>
-            <div className='flex flex-col items-center mt-24 border-2 border-gray-300 p-1 rounded-lg'>
-                <h1 className='flex text-2xl font-bold'>
-                    Create New Product
-                </h1>
-                <form
-                    className='flex flex-col gap-2 justify-center items-center'
-                    action="http://localhost:8080/products" 
-                    encType="multipart/form-data"
-                    onSubmit={handleSubmit}
-                    >
-                    <input 
-                        className='border-2 border-gray-300 rounded-md'
-                        type="file" 
-                        name="image" 
-                        onChange={handleFileChange} 
-                        required
-                        />
-                    <input 
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text" 
-                        name="title" 
-                        onChange={handleInputChange} 
-                        placeholder="Product Title" 
-                        required
-                        />
-                    <input
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text" 
-                        name="description" 
-                        onChange={handleInputChange} 
-                        placeholder="Product Description" 
-                        required
-                        />
-                    <input 
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text" 
-                        name="price" 
-                        onChange={handleInputChange}
-                        placeholder='Price: 0.00'
-                        required
-                        />
-                    <select
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        name='category_id'
-                        value={product.category_id || ""}
-                        onChange={handleInputChange}
-                        required
+            {createMode === 'product' && (
+                <div className='flex flex-col items-center mt-24 border-2 border-gray-300 p-1 rounded-lg'>
+                    <h1 className='flex text-2xl font-bold'>
+                        Create New Product
+                    </h1>
+                    <form
+                        className='flex flex-col gap-2 justify-center items-center'
+                        action="http://localhost:8080/products" 
+                        encType="multipart/form-data"
+                        onSubmit={handleSubmit}
+                        >
+                        {previewImage && (
+                            <Image 
+                                src={previewImage}
+                                alt="Preview"
+                                width={200}
+                                height={200}
+                                className="object-cover rounded"
+                                />
+                        )}
+                        <input 
+                            className='border-2 border-gray-300 rounded-md'
+                            type="file" 
+                            name="image" 
+                            onChange={handleFileChange} 
+                            required
+                            />
+                        <input 
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="title" 
+                            onChange={handleInputChange} 
+                            placeholder="Title" 
+                            required
+                            />
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="description" 
+                            onChange={handleInputChange} 
+                            placeholder="Description" 
+                            required
+                            />
+                        <input 
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="price" 
+                            onChange={handleInputChange}
+                            placeholder='Price 0.00'
+                            required
+                            />
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="quantity" 
+                            onChange={handleInputChange}
+                            placeholder='Quantity'
+                            required
+                            />
+                        <select
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            name='category_id'
+                            value={product.category_id || ""}
+                            onChange={handleInputChange}
+                            required
                             >
                             <option value="">Select a category</option>
                             {allCategoriesFlat.map((category) => (
@@ -304,101 +418,173 @@ const AddProduct = () => {
                                     {category.name}
                                 </option>
                             ))}
-                    </select>
+                        </select>
+                        {metadata && Object.keys(metadata).length > 0 && (
+                            <ul className='flex flex-col gap-2 w-full'>
+                                {Object.entries(metadata).map(([key, value]) => (
+                                    <input 
+                                        key={key}
+                                        className='border-2 gap-2 border-gray-300 rounded-md pl-1 w-full'
+                                        name={key}
+                                        placeholder={key}
+                                        value={metadataValues[key] || ""}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            const loweredKey = key.toLowerCase();
 
-                    {(getCategoryName(product.category_id) === "Clothes" ||
-                     getCategoryName(product.category_id) === "Shirts" || 
-                     getCategoryName(product.category_id) === "Pants") && (
-                        <>
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="brand" 
-                                onChange={handleInputChange}
-                                placeholder='Brand'
-                                required
+                                            setMetadataValues(prev => ({
+                                                ...prev,
+                                                [key]: newValue
+                                            }));
+
+                                            const metaKeys = ["author", "brand", "model", "size", "color"];
+                                            if (metaKeys.includes(loweredKey)) {
+                                                setProduct(prev => ({
+                                                    ...prev,
+                                                    [loweredKey]: newValue
+                                                }));
+                                            }
+                                        }}
+                                        />
+                                ))}
+                            </ul>
+                        )}
+                        <div className='flex flex-row gap-2 p-2'>
+                            <button type='button' className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={handleCancel}>
+                                Cancel
+                            </button>
+                            <button type="submit" className='border-2 border-gray-300 p-1 rounded-lg font-semibold'>
+                                Add
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {createMode === 'variant' && (
+                <div className='flex flex-col items-center mt-24 border-2 border-gray-300 p-1 rounded-lg'>
+                    <h1 className='flex text-2xl font-bold'>
+                        Create New Variant
+                    </h1>
+                    <form
+                        className='flex flex-col gap-2 justify-center items-center'
+                        action="http://localhost:8080/products" 
+                        encType="multipart/form-data"
+                        onSubmit={handleSubmit}
+                        >
+                        <select
+                            className="border-2 border-gray-300 rounded-md pl-1 w-full"
+                            name="product_id"
+                            value={product.product_id || ""}
+                            onChange={handleInputChange}
+                            required
+                            >
+                            <option value={product.id || 0}>Select parent product</option>
+                            {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.title}
+                                </option>
+                            ))}
+                        </select>
+                        {previewImage && (
+                            <Image 
+                                src={previewImage}
+                                alt="Preview"
+                                width={200}
+                                height={200}
+                                className="object-cover rounded"
                                 />
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="size" 
-                                onChange={handleInputChange}
-                                placeholder='Size'
-                                required
-                                />
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="color" 
-                                onChange={handleInputChange}
-                                placeholder='Color'
-                                required
-                                />
-                        </>
-                    )}
-                    {getCategoryName(product.category_id) === "Books" && (
-                        <>
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="author" 
-                                onChange={handleInputChange}
-                                placeholder='Author'
-                                required
-                                />
-                        </>
-                    )}
-                    {getCategoryName(product.category_id) === "Electronics" && (
-                        <>
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="brand" 
-                                onChange={handleInputChange}
-                                placeholder='Brand'
-                                required
-                                />
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="model" 
-                                onChange={handleInputChange}
-                                placeholder='Model'
-                                required
-                                />
-                        </>
-                    )}
-                    {(getCategoryName(product.category_id) === "Toys" ||
-                     getCategoryName(product.category_id) === "Games") && (
-                        <>
-                            <input
-                                className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                                type="text" 
-                                name="brand" 
-                                onChange={handleInputChange}
-                                placeholder='Brand'
-                                required
-                                />
-                        </>
-                    )}
-                    <input
-                        className='border-2 border-gray-300 rounded-md pl-1 w-full'
-                        type="text" 
-                        name="quantity" 
-                        onChange={handleInputChange}
-                        placeholder='Quantity'
-                        required
-                        />
-                    <div className='flex flex-row gap-2 p-2'>
-                        <button type='button' className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={handleCancel}>
-                            Cancel
-                        </button>
-                        <button type="submit" className='border-2 border-gray-300 p-1 rounded-lg font-semibold'>
-                            Add
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        )}
+                        <input 
+                            className='border-2 border-gray-300 rounded-md'
+                            type="file" 
+                            name="Variant_image"
+                            onChange={handleFileChange} 
+                            required
+                            />
+
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="variant_type"
+                            value={product.variant_type || ""}
+                            onChange={handleInputChange} 
+                            placeholder="Variant type" 
+                            required
+                            />
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="variant_price"
+                            value={product.variant_price || 0.0}
+                            onChange={handleInputChange}
+                            placeholder='Variant Price'
+                            required
+                            />
+                        <input
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            type="text" 
+                            name="variant_quantity"
+                            value={product.variant_quantity}
+                            onChange={handleInputChange}
+                            placeholder='Variant quantity'
+                            required
+                            />
+                        <select
+                            className='border-2 border-gray-300 rounded-md pl-1 w-full'
+                            name='category_id'
+                            value={product.category_id || ""}
+                            onChange={handleInputChange}
+                            required
+                            >
+                            <option value="">Select a category</option>
+                            {allCategoriesFlat.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </select>
+                        {metadata && Object.keys(metadata).length > 0 && (
+                            <ul className='flex flex-col gap-2 w-full'>
+                                {Object.entries(metadata).map(([key, value]) => (
+                                    <input 
+                                        key={key}
+                                        className='border-2 gap-2 border-gray-300 rounded-md pl-1 w-full'
+                                        name={key}
+                                        placeholder={key}
+                                        value={metadataValues[key] || ""}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            const loweredKey = key.toLowerCase();
+
+                                            setMetadataValues(prev => ({
+                                                ...prev,
+                                                [key]: newValue
+                                            }));
+
+                                            const metaKeys = ["size", "color"];
+                                            if (metaKeys.includes(loweredKey)) {
+                                                const variantKey = loweredKey === "color" ? "variant_color" : "variant_size";
+                                                setProduct(prev => ({
+                                                    ...prev,
+                                                    [variantKey]: newValue
+                                                }));
+                                            }
+                                        }}
+                                        />
+                                ))}
+                            </ul>
+                        )}
+                        <div className='flex flex-row gap-2 p-2'>
+                            <button type='button' className='border-2 border-gray-300 p-1 rounded-lg font-semibold' onClick={handleCancel}>
+                                Cancel
+                            </button>
+                            <button type="submit" className='border-2 border-gray-300 p-1 rounded-lg font-semibold'>
+                                Add
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
             <div className="ml-2 mt-24 flex w-1/2 border-2 border-gray-300 rounded-lg">
                 <div className='flex flex-col p-4'>
                     <h1 className='flex  text-2xl font-bold mb-1'>

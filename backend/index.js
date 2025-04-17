@@ -9,7 +9,13 @@ import cartRoutes from "./routes/cartRoutes.js";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 
+import path from "path"; // NEW
+import { fileURLToPath } from "url"; // NEW
+
 const app = express();
+
+const __filename = fileURLToPath(import.meta.url); // NEW
+const __dirname = path.dirname(__filename); // NEW
 
 // Middleware
 app.use(cookieParser());
@@ -39,9 +45,20 @@ app.use("/products", productRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/cart", cartRoutes);
 
+/*
 app.get("/", (req, res) => { 
     res.status(200).json("Hello, welcome to the backend!");
 })
+*/
+
+// Serve static React frontend (after build) NEW
+app.use(express.static(path.join(__dirname, "../client/out")));
+
+// Catch-all route for React client-side routing NEW
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../client/out", "index.html"));
+});
+
 
 app.listen(8080, () => {
     console.log("Connected to backend... listening on http://localhost:8080");

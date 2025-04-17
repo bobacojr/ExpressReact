@@ -6,10 +6,12 @@ dotenv.config();
 
 // Create MySQL connection
 const db = mysql2.createConnection({
-    host: "localhost",
-    user: "root",
-    password: process.env.DB_PASSWORD,
-    database: "test"
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "test",
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+    multipleStatements: true // optional, depends on your SQL queries
 });
 
 db.connect((error) => {
