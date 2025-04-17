@@ -1,5 +1,5 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import db from "../db.js";
 import { body, validationResult } from "express-validator";
 import rateLimit from "express-rate-limit";
