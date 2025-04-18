@@ -45,19 +45,18 @@ app.use("/products", productRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/cart", cartRoutes);
 
-/*
 app.get("/", (req, res) => { 
     res.status(200).json("Hello, welcome to the backend!");
 })
-*/
 
 // Serve static React frontend (after build) NEW
-app.use(express.static(path.join(__dirname, "../client/out")));
+//app.use(express.static(path.join(__dirname, "../client/out")));
 
 // Catch-all route for React client-side routing NEW
-app.get("*", (req, res) => {
+/*app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "../client/out", "index.html"));
 });
+*/
 
 
 app.listen(8080, () => {
